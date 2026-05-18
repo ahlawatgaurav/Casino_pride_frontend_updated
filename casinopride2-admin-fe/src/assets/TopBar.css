@@ -1,0 +1,25 @@
+.top-bar {
+  display: flex;
+  align-items: center;
+  background-color: #333;
+  color: white;
+  padding: 10px 20px;
+}
+
+.user-details {
+  font-weight: bold;
+  margin-right: 20px; /* Add some space between user details and logout button */
+}
+
+.logout-button {
+  background: transparent;
+  border: none;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.logout-button svg {
+  margin-right: 5px;
+}

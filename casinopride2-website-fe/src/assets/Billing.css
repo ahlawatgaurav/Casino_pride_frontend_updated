@@ -1,0 +1,77 @@
+.thermal-bill {
+  font-family: Arial, sans-serif;
+  text-align: center;
+  margin: 20px auto;
+  width: 80% !important;
+}
+
+.thermal-bill h1 {
+  margin-bottom: 20px;
+}
+
+.bill-details {
+  text-align: left;
+}
+
+.date-time-bill-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.bill-number {
+  margin-left: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+/* table,
+  th,
+  td {
+    border: 1px solid #000;
+  }
+  
+  th,
+  td {
+    padding: 8px;
+  }
+  
+  .totals p {
+    text-align: left;
+  }
+  
+  .terms h2 {
+    margin-top: 20px;
+  }
+  
+  .terms p {
+    text-align: left;
+    margin-bottom: 10px;
+  } */
+
+/* .terms p {
+    text-align: right;
+    margin-bottom: 10px;
+  } */
+
+.logo-image {
+  height: 50px;
+  width: 150px;
+  object-fit: cover;
+}
+
+.BillPrintFont {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.BillPrintFontAmount {
+  font-size: 18px;
+  font-weight: bold;
+  width: 300px;
+  text-align: right;
+}

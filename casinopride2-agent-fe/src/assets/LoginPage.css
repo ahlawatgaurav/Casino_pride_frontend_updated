@@ -1,0 +1,49 @@
+title {
+  color: black;
+  font-size: large;
+}
+.subtitle {
+  color: black;
+  font-size: medium;
+}
+.description {
+  color: gray;
+  font-size: small;
+}
+
+.navbar-container {
+  display: flex;
+  height: 100vh;
+  flex-direction: column;
+}
+
+.toggle-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 50px; /* Set the height as needed */
+  width: 50px; /* Set the width for the button */
+  background-color: #333;
+  color: white;
+  cursor: pointer;
+}
+
+.pro-sidebar {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.collapsed .pro-sidebar {
+  width: 80px;
+}
+
+.sidebar-content {
+  display: flex;
+}
+.logo {
+  height: 150px; /* Set the height */
+  width: 150px; /* Set the width */
+  align-self: center; /* Center vertically */
+  justify-self: center; /* Center horizontally */
+  object-fit: contain;
+}

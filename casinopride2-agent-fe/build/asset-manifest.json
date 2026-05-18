@@ -1,0 +1,30 @@
+{
+  "files": {
+    "main.css": "/static/css/main.28504a8d.css",
+    "main.js": "/static/js/main.5e76e85b.js",
+    "static/js/703.0f87a346.chunk.js": "/static/js/703.0f87a346.chunk.js",
+    "static/js/513.9e918463.chunk.js": "/static/js/513.9e918463.chunk.js",
+    "static/js/787.07102da6.chunk.js": "/static/js/787.07102da6.chunk.js",
+    "static/media/logo.png": "/static/media/logo.0d5cb3d434fd4209b353.png",
+    "service-worker.js": "/service-worker.js",
+    "static/media/more.png": "/static/media/more.dbe214f6ee6932a393a8.png",
+    "static/media/onlylogo.png": "/static/media/onlylogo.2a5f7d67c3d9298cf796.png",
+    "static/media/cancel.png": "/static/media/cancel.a7ae62460037b2768f12.png",
+    "static/media/paymentf.png": "/static/media/paymentf.d41c2a1c1978a9530527.png",
+    "static/media/deal.png": "/static/media/deal.13c53abdb771293e6c68.png",
+    "static/media/check.png": "/static/media/check.0e163e83492acb677d72.png",
+    "static/media/xcircle.png": "/static/media/xcircle.09b3322074e8178e66b2.png",
+    "static/media/checkcircle.png": "/static/media/checkcircle.d69ceb9329f4f2f5dc3d.png",
+    "static/media/index.less": "/static/media/index.b1bed9b12948b138f7e7.less",
+    "index.html": "/index.html",
+    "main.28504a8d.css.map": "/static/css/main.28504a8d.css.map",
+    "main.5e76e85b.js.map": "/static/js/main.5e76e85b.js.map",
+    "703.0f87a346.chunk.js.map": "/static/js/703.0f87a346.chunk.js.map",
+    "513.9e918463.chunk.js.map": "/static/js/513.9e918463.chunk.js.map",
+    "787.07102da6.chunk.js.map": "/static/js/787.07102da6.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.28504a8d.css",
+    "static/js/main.5e76e85b.js"
+  ]
+}
