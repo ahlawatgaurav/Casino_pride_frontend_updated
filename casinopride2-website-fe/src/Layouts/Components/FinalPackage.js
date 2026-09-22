@@ -6,7 +6,7 @@ const FinalPackage = ({ adults, teens, kids, packageName }) => {
       <div class="row">
         <div class="col-lg-4">
           <img
-            src="https://www.casinoprideofficial.com/assets/images/otp_regular.jpeg"
+            src="/assets/images/otp_regular.jpeg"
             alt="Image 2"
             className="img-fluid confirm_booking_img"
             // class="embed-responsive mb-4"
@@ -42,7 +42,7 @@ const FinalPackage = ({ adults, teens, kids, packageName }) => {
             <div className="col-md-6 col-lg-2">
               <div className="image-container d-flex flex-column align-items-center">
                 <img
-                  src="https://www.casinoprideofficial.com/assets/images/red-carpet.png"
+                  src="/assets/images/red-carpet.png"
                   alt="Image 1"
                   className="img-fluid package_card_image"
                 />
@@ -52,7 +52,7 @@ const FinalPackage = ({ adults, teens, kids, packageName }) => {
             <div className="col-md-6 col-lg-2">
               <div className="image-container d-flex flex-column align-items-center">
                 <img
-                  src="https://www.casinoprideofficial.com/assets/images/buffet.png"
+                  src="/assets/images/buffet.png"
                   alt="Image 2"
                   className="img-fluid package_card_image"
                 />
@@ -62,7 +62,7 @@ const FinalPackage = ({ adults, teens, kids, packageName }) => {
             <div className="col-md-6 col-lg-2">
               <div className="image-container d-flex flex-column align-items-center">
                 <img
-                  src="https://www.casinoprideofficial.com/assets/images/bonus.png"
+                  src="/assets/images/bonus.png"
                   alt="Image 3"
                   className="img-fluid package_card_image"
                 />

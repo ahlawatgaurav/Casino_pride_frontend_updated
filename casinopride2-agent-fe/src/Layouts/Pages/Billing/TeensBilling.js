@@ -220,7 +220,7 @@ const TeensBilling = () => {
                 );
                 setLoader(false);
 
-                const apiUrl = `https://commnestsms.com/api/push.json?apikey=635cd8e64fddd&route=transactional&sender=CPGOAA&mobileno=7972709154&text=Thank%20you%20for%20choosing%20Casino%20Pride.%20View%20e-bill%20of%20Rs%20V@1%20at%20-%20V@2%0ALets%20Play%20with%20Pride%20!%0AGood%20luck%20!%0ACPGOAA`;
+                const apiUrl = `http://commnestsms.com/api/push.json?apikey=635cd8e64fddd&route=transactional&sender=CPGOAA&mobileno=7972709154&text=Thank%20you%20for%20choosing%20Casino%20Pride.%20View%20e-bill%20of%20Rs%20V@1%20at%20-%20V@2%0ALets%20Play%20with%20Pride%20!%0AGood%20luck%20!%0ACPGOAA`;
                 fetch(apiUrl)
                   .then((response) => {
                     if (!response.ok) {

@@ -337,7 +337,7 @@ const PackagesPage = ({
                       <div className="col-md-12 col-lg-3">
                         <div className="image-container d-flex flex-column align-items-center">
                           <img
-                            src="https://www.casinoprideofficial.com/assets/images/red-carpet.png"
+                            src="/assets/images/red-carpet.png"
                             alt="Image 1"
                             className="img-fluid package_card_image"
                           />
@@ -354,7 +354,7 @@ const PackagesPage = ({
                       <div className="col-md-6 col-lg-4">
                         <div className="image-container d-flex flex-column align-items-center">
                           <img
-                            src="https://www.casinoprideofficial.com/assets/images/buffet.png"
+                            src="/assets/images/buffet.png"
                             alt="Image 2"
                             className="img-fluid package_card_image"
                           />

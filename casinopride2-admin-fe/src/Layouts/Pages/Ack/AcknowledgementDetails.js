@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { connect, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
@@ -78,6 +78,7 @@ const AcknowledgementDetails = () => {
   const [dateFromBackend, setDateFromBackend] = useState();
   const [isBillGenerated, setIsBilllGenerated] = useState();
   const [billGenerated, setBillGenerated] = useState(false);
+  const billingSubmitRef = useRef(false);
 
   const [comparisonResult, setComparisonResult] = useState("");
   const [disabledBtn, setDisableBtn] = useState(false);
@@ -238,6 +239,7 @@ const AcknowledgementDetails = () => {
             );
             setDateFromBackend(callback?.response?.Details?.FutureDate);
             setIsBilllGenerated(callback?.response?.Details?.IsBillGenerated);
+            if (callback?.response?.Details?.IsBillGenerated == 1) setBillGenerated(true);
 
             const data = {
               bookingId: callback?.response?.Details.Id,
@@ -349,6 +351,12 @@ const AcknowledgementDetails = () => {
   console.log("today------->", today);
 
   const confirmBilling = () => {
+    // Prevent duplicate bills from rapid/double Pay clicks (state updates are async, so use a ref).
+    if (billingSubmitRef.current || billGenerated) return;
+    billingSubmitRef.current = true;
+    setTimeout(() => {
+      billingSubmitRef.current = false;
+    }, 20000);
     console.log("bookingData?.data--->", bookingData);
     const shiftData = {
       bookingId: bookingData?.bookingId,
@@ -379,9 +387,7 @@ const AcknowledgementDetails = () => {
               "booking details updateShiftForBooking--------------?",
               callback1?.response?.Details
             );
-            const AgentSettlemetDiscount =
-            localAgentDetails?.DiscountPercent -
-            callback1?.response?.Details?.AgentPanelDiscount;
+            const AgentSettlemetDiscount = 15 - ((Number(callback1?.response?.Details?.ActualAmount) > 0) ? ((Number(callback1?.response?.Details?.ActualAmount) - Number(callback1?.response?.Details?.AmountAfterDiscount)) / Number(callback1?.response?.Details?.ActualAmount)) * 100 : 0);
 
           console.log(
             "AgentSettlemetDiscount-------->",
@@ -401,7 +407,7 @@ const AcknowledgementDetails = () => {
           // const AgentSettlementAmount =
           //   (calculateAmountAfterDiscount * AgentSettlemetDiscount) /
           //   100;
-          const AgentSettlementAmount = (AgentSettlemetDiscount/100)*callback1?.response?.Details?.AmountAfterDiscount
+          const AgentSettlementAmount = (Math.max(Number(AgentSettlemetDiscount) || 0, 0)/100)*callback1?.response?.Details?.AmountAfterDiscount
 
 
           const agentData = {
@@ -646,9 +652,7 @@ const AcknowledgementDetails = () => {
 
             console.log("data------------>", data);
 
-            const AgentSettlemetDiscount =
-            localAgentDetails?.DiscountPercent -
-            callback?.response?.Details?.AgentPanelDiscount;
+            const AgentSettlemetDiscount = 15 - ((Number(callback?.response?.Details?.ActualAmount) > 0) ? ((Number(callback?.response?.Details?.ActualAmount) - Number(callback?.response?.Details?.AmountAfterDiscount)) / Number(callback?.response?.Details?.ActualAmount)) * 100 : 0);
 
           console.log(
             "AgentSettlemetDiscount-------->",
@@ -668,7 +672,7 @@ const AcknowledgementDetails = () => {
           // const AgentSettlementAmount =
           //   (calculateAmountAfterDiscount * AgentSettlemetDiscount) /
           //   100;
-          const AgentSettlementAmount = (AgentSettlemetDiscount/100)*callback?.response?.Details?.AmountAfterDiscount
+          const AgentSettlementAmount = (Math.max(Number(AgentSettlemetDiscount) || 0, 0)/100)*callback?.response?.Details?.AmountAfterDiscount
 
           const agentData = {
             userId: localAgentDetails?.Id,

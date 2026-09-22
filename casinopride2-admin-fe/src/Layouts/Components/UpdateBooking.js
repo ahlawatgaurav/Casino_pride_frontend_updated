@@ -68,6 +68,41 @@ const UpdateBooking = () => {
     (state) => state.auth?.userDetailsAfterLogin.Details
   );
 
+  const validateDetails = useSelector(
+    (state) => state.auth?.userDetailsAfterValidation
+  );
+
+  const isCallCenterUser = (user) => {
+    const categoryName = String(
+      user?.CategoryName || user?.Category || user?.CategoryTitle || ""
+    ).toLowerCase();
+
+    return categoryName.includes("call center") || categoryName.includes("call centre");
+  };
+
+  const isCallCenterLogin =
+    isCallCenterUser(loginDetails?.logindata) ||
+    isCallCenterUser(validateDetails?.Details);
+
+  const isJettyEditor = (user) => {
+    const categoryName = String(
+      user?.CategoryName || user?.Category || user?.CategoryTitle || ""
+    ).toLowerCase();
+    const cid = Number(user?.CategoryId);
+    return (
+      categoryName.includes("jetty gre") ||
+      categoryName.includes("jetty manager") ||
+      cid === 9 ||
+      cid === 10
+    );
+  };
+  const isJettyEditorLogin =
+    isJettyEditor(loginDetails?.logindata) ||
+    isJettyEditor(validateDetails?.Details);
+
+  const isUnpaidBooking = (booking) =>
+    booking?.PayAtCounter == 1 || booking?.PaymentMode === "Cash";
+
   console.log("loginDetails-------------->", loginDetails);
 
   useEffect(() => {
@@ -132,6 +167,11 @@ const UpdateBooking = () => {
                       "callabck.response.details>>",
                       callback?.response?.Details
                     );
+                    setCustomerCategoryId(
+                      callback?.response?.Details?.CategoryId
+                        ? Number(callback.response.Details.CategoryId)
+                        : null
+                    );
                     setLocalAgentId(callback?.response?.Details?.Id);
                     setLocalAgentDetails(callback?.response?.Details);
                   } else {
@@ -153,6 +193,12 @@ const UpdateBooking = () => {
   const outletOpenDetails = useSelector((state) => state.auth?.outeltDetails);
   const bookingDetails = useSelector((state) => state.booking?.bookingDetails).Details;
 
+  useEffect(() => {
+    if ((isCallCenterLogin || isJettyEditorLogin) && bookingDetails?.Id && !isUnpaidBooking(bookingDetails)) {
+      toast.error("Only unpaid bookings can be edited by Call Center.");
+      navigate("/BookingList");
+    }
+  }, [isCallCenterLogin, bookingDetails, navigate]);
 
   const activeDateOfOutlet = useSelector(
     (state) => state.users?.saveOutletDate?.Details
@@ -166,10 +212,6 @@ const UpdateBooking = () => {
   console.log(
     "activeDateOfOutlet------------------>",
     activeDateOfOutlet?.OutletStatus
-  );
-
-  const validateDetails = useSelector(
-    (state) => state.auth?.userDetailsAfterValidation
   );
 
   const [shiftDetails, setShiftDetails] = useState("");
@@ -236,11 +278,19 @@ const UpdateBooking = () => {
 
   const [localAgentDetails, setLocalAgentDetails] = useState("");
   const [localAgentId, setLocalAgentId] = useState();
+  const [customerCategoryId, setCustomerCategoryId] = useState(null);
 
   const [TravelAgentId, setTravelAgentId] = useState("");
   const [TravelDetails, setTravelDetails] = useState();
 
-  const [Discountpercent, setDiscountpercent] = useState(bookingDetails?.PanelDiscount);
+  const [Discountpercent, setDiscountpercent] = useState(
+    Number(bookingDetails?.ActualAmount) > 0
+      ? Math.round(
+          ((Number(bookingDetails?.ActualAmount) - Number(bookingDetails?.AmountAfterDiscount)) /
+            Number(bookingDetails?.ActualAmount)) * 100
+        )
+      : bookingDetails?.PanelDiscount || 0
+  );
 
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -273,8 +323,10 @@ const UpdateBooking = () => {
     }
 
     const Discount = url.searchParams.get("Discountpercent");
-    setDiscountpercent(Discount);
-    setDiscountFigure(Discount);
+    if (Discount) {
+      setDiscountpercent(Discount);
+      setDiscountFigure(Discount);
+    }
   }, []);
 
   const [guestName, setGuestName] = useState(bookingDetails?.FullName);
@@ -351,6 +403,14 @@ const UpdateBooking = () => {
     setgstNumber(bookingDetails?.GSTNumber || "");
     setamount(bookingDetails?.ActualAmount);
     setamountAfterDiscount(bookingDetails?.AmountAfterDiscount);
+    // Recompute the applied discount % whenever bookingDetails (async from redux) loads,
+    // so managers/GRE see the agent discount in the edit form.
+    const __ba = Number(bookingDetails?.ActualAmount) || 0;
+    setDiscountpercent(
+      __ba > 0
+        ? Math.round(((__ba - Number(bookingDetails?.AmountAfterDiscount)) / __ba) * 100)
+        : bookingDetails?.PanelDiscount || 0
+    );
     setPackageIds(bookingDetails?.packageId);
     setPackageGuestCount(bookingDetails?.packageGuestCount);
     setPackageName(bookingDetails?.packageNames);
@@ -454,8 +514,9 @@ const UpdateBooking = () => {
   };
 
   const isValidEmail = (email) => {
-    const emailPattern = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
-    return emailPattern.test(email);
+    const normalizedEmail = (email || "").trim();
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    return emailPattern.test(normalizedEmail);
   };
 
   const currentDate = new Date();
@@ -484,6 +545,7 @@ const UpdateBooking = () => {
   const handleShow = () => {
     // setShow(true)
     console.log("okuuuuu", gstNumber?.length);
+    const normalizedEmail = (email || "").trim();
 
     if (guestName == "" || phone === "" || address == "") {
       toast.warning("Please fill all the fields");
@@ -493,7 +555,7 @@ const UpdateBooking = () => {
       toast.warning("Please enter a valid GST number");
       setLoader(false);
       handleClose();
-    } else if (!isValidEmail(email) && loginDetails?.logindata?.UserType !== ROLES.GRE ) {
+    } else if (!isValidEmail(normalizedEmail) && loginDetails?.logindata?.UserType !== ROLES.GRE ) {
       toast.warning("Please enter a valid email address");
       setLoader(false);
       handleClose();
@@ -511,6 +573,13 @@ const UpdateBooking = () => {
   };
 
   const onsubmit = () => {
+    if ((isCallCenterLogin || isJettyEditorLogin) && !isUnpaidBooking(bookingDetails)) {
+      toast.error("Only unpaid bookings can be edited by Call Center.");
+      setLoader(false);
+      handleClose();
+      return;
+    }
+
     const discountFigureToUse = discountToggle ? discountFigure : 0;
     const selectedOptionToUse = discountToggle ? selectedOption : null;
 
@@ -522,13 +591,19 @@ const UpdateBooking = () => {
 
     teenpackageIdArray.push(teenpackageId);
     console.log("onsubmit>>>shiftDetails>>", shiftDetails);
+    // Freeze original discount (e.g. agent discount) so editing never drops it.
+    const __origActual = Number(bookingDetails?.ActualAmount) || 0;
+    const __origAfter = Number(bookingDetails?.AmountAfterDiscount) || 0;
+    const __frozenDiscPct = __origActual > 0 ? ((__origActual - __origAfter) / __origActual) * 100 : 0;
+    const __frozenAmountAfterDiscount = Number(amount) - (Number(amount) * __frozenDiscPct) / 100;
+    const __frozenAgentDiscount = Number(bookingDetails?.AgentPanelDiscount) || 0;
     const data = {
       bookingId: +bookingId,
       isActive: 1,
       guestName: guestName,
       address: address,
       phone: phone,
-      email: email,
+      email: (email || "").trim(),
       dob: dateofbirth,
       country: selectedCountry?.name,
       state: selectedState?.name,
@@ -552,7 +627,8 @@ const UpdateBooking = () => {
           : 0,
       actualAmount: amount,
       governmentId: "",
-      amountAfterDiscount: amount,
+      amountAfterDiscount: __frozenAmountAfterDiscount,
+      agentPanelDiscount: __frozenAgentDiscount,
       packageName:
         packageIds.length == 0
           ? JSON.stringify(teensPackageName)
@@ -987,8 +1063,22 @@ const UpdateBooking = () => {
           setTeensWeekendPrice={setTeensWeekendPrice}
           setTeensPackageName={setTeensPackageName}
           outletDate={activeDateOfOutlet?.OutletDate}
+          categoryId={customerCategoryId}
           bookingDetails={bookingDetails}
         />
+        {Number(Discountpercent) > 0 && (
+          <div className="col-lg-6 mt-3">
+            <label for="formGroupExampleInput " className="form_text">
+              Agent Discount %
+            </label>
+            <input
+              class="form-control mt-2"
+              type="text"
+              value={`${Discountpercent}%`}
+              disabled={true}
+            />
+          </div>
+        )}
         <div className="col-lg-6 mt-3 mt-3">
           <label for="formGroupExampleInput " className="form_text">
             Guest Name <span style={{ color: "red" }}>*</span>

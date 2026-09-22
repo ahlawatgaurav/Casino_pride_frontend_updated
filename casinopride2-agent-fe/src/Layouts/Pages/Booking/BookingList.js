@@ -244,7 +244,7 @@ const BookingList = () => {
           <div className="col-md-4 col-lg-4 d-flex justify-content-end mb-3">
             <Link
               to="/NewBooking"
-              state={{ userType: "4" }}
+              state={{ userType: "4", futureDate: bookingDate }}
               className="addLinks"
               >
               <button className="btn btn-primary h-100">
@@ -259,6 +259,9 @@ const BookingList = () => {
         <thead>
           <tr>
             <th scope="col" className="text-center table_heading">
+              Booking No.
+            </th>
+            <th scope="col" className="text-center table_heading">
               Full Name
             </th>
             <th scope="col" className="text-center table_heading">
@@ -270,9 +273,15 @@ const BookingList = () => {
             <th scope="col" className="text-center table_heading">
               Total Guest Count
             </th>
-            {/* <th scope="col" className="text-center table_heading">
-              Update Booking
-            </th> */}
+            <th scope="col" className="text-center table_heading">
+              Kids
+            </th>
+            <th scope="col" className="text-center table_heading">
+              Status
+            </th>
+            <th scope="col" className="text-center table_heading">
+              Commission
+            </th>
 
             <th scope="col" className="text-center table_heading">
               View more
@@ -282,7 +291,7 @@ const BookingList = () => {
         <tbody>
           {loading ? (
             <tr>
-              <td colSpan="6" className="text-center">
+              <td colSpan="9" className="text-center">
                 <div
                   style={{
                     display: "flex",
@@ -306,37 +315,40 @@ const BookingList = () => {
             </tr>
           ) : filteredUserBookings.length === 0 ? (
             <tr>
-              <td colSpan="6" className="text-center">
+              <td colSpan="9" className="text-center">
                 No data found.
               </td>
             </tr>
           ) : (
-            filteredUserBookings.map((item) => (
+            filteredUserBookings.map((item) => {
+              const isBilled = item?.IsBillGenerated == 1;
+              const isUnpaid =
+                !isBilled && item?.IsBookingWebsite != 1;
+              return (
               <tr key={item.id}>
+                <td className="manager-list">{item.Id}</td>
                 <td className="manager-list ">{item.FullName}</td>
                 <td className="manager-list">{item.Phone}</td>
                 <td className="manager-list">{item.ActualAmount}</td>
                 <td className="manager-list">{item.TotalGuestCount}</td>
-                {/* <td className="manager-list">
-                  <button
-                    className="btn btn-primary"
-                    onClick={() => startEditing(item)}
+                <td className="manager-list">{item.NumOfKids || 0}</td>
+                <td className="manager-list">
+                  <span
+                    style={{
+                      padding: "4px 8px",
+                      borderRadius: "4px",
+                      backgroundColor: isUnpaid ? "#ffebee" : "#e8f5e9",
+                      color: isUnpaid ? "#c62828" : "#2e7d32",
+                      fontSize: "12px",
+                      fontWeight: "500",
+                    }}
                   >
-                    Update Booking
-                  </button>
-                </td> */}
-
-                {/* <td className="manager-list">
-                  <Link
-                    to="/AddPackage"
-                    state={{ userData: item }}
-                    className="links"
-                  >
-                    <AiFillEdit
-                      style={{ color: "#C5CEE0", fontSize: "20px" }}
-                    />
-                  </Link>
-                </td> */}
+                    {isUnpaid ? "Unpaid" : "Paid"}
+                  </span>
+                </td>
+                <td className="manager-list">
+                  {isBilled ? item.BookingCommision : "-"}
+                </td>
 
                 <td
                   className="manager-list"
@@ -345,7 +357,8 @@ const BookingList = () => {
                   <img src={more} className="more_img" />
                 </td>
               </tr>
-            ))
+              );
+            })
           )}
         </tbody>
       </table>
@@ -428,7 +441,7 @@ const BookingList = () => {
           </div>
           <div className="col-6">
             <p className="table-modal-list ">
-              Booking Commission: {selectedUserDetails.BookingCommision}
+              Booking Commission: {selectedUserDetails?.IsBillGenerated == 1 ? selectedUserDetails.BookingCommision : "-"}
             </p>
           </div>
 

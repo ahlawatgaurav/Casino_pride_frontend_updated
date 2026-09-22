@@ -49,7 +49,7 @@ function LoginPage() {
       {/* <Navbar bg="light" expand="lg">
         <Navbar.Brand href="#">
           <img
-            src="https://www.casinoprideofficial.com/assets/images/logo.png"
+            src="/assets/images/logo.png"
             alt="Logo"
             className="d-inline-block align-top"
             style={{ marginRight: "10px", height: "30px" }} // Adjust the height as needed

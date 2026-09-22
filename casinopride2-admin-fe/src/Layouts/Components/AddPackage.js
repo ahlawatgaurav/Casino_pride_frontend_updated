@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { AddPackageDetails, editPackage } from "../../Redux/actions/users";
+import { AddPackageDetails, editPackage, getAllCategories } from "../../Redux/actions/users";
 import { useLocation } from "react-router-dom";
 
 import { useSelector } from "react-redux";
@@ -164,6 +164,35 @@ const [startDate, setStartDate] = useState(userData?.PackageStartDate ?? moment(
     userData?.IsPackageEnabled ? userData?.IsPackageEnabled : 0
   );
 
+  // ---- Visibility: which categories can see this package ----
+  const [categoriesList, setCategoriesList] = useState([]);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState(
+    Array.isArray(userData?.CategoryIds)
+      ? userData.CategoryIds.map(Number)
+      : (typeof userData?.CategoryIds === "string" && userData.CategoryIds.length > 0
+          ? userData.CategoryIds.split(",").map(Number)
+          : [])
+  );
+
+  useEffect(() => {
+    const token = loginDetails?.logindata?.Token;
+    if (!token) return;
+    dispatch(
+      getAllCategories(token, (callback) => {
+        if (callback.status) {
+          setCategoriesList(callback?.response?.Details || []);
+        }
+      })
+    );
+  }, [dispatch, loginDetails]);
+
+  const toggleCategory = (catId) => {
+    const id = Number(catId);
+    setSelectedCategoryIds((prev) =>
+      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
+    );
+  };
+
   const handleToggle = () => {
     setIsChecked(!isChecked);
   };
@@ -196,7 +225,8 @@ const [startDate, setStartDate] = useState(userData?.PackageStartDate ?? moment(
         packageTeensTax: packageTeensPercentage,
         packageTeensTaxName: packageTeensTax,
         isPackageEnabled: startDate === new Date().toISOString().substring(0,10) ? 1 : 0,
-        startDate: startDate
+        startDate: startDate,
+        categoryIds: selectedCategoryIds,
       };
       console.log("Data-------->", data);
 
@@ -230,6 +260,7 @@ const [startDate, setStartDate] = useState(userData?.PackageStartDate ?? moment(
       packageTeensTax: packageTeensPercentage,
       packageTeensTaxName: packageTeensTax,
       isPackageEnabled: isChecked == "1" ? 1 : 0,
+      categoryIds: selectedCategoryIds,
     };
     console.log("dataaaaa------------>", data);
     console.log(
@@ -407,6 +438,55 @@ const [startDate, setStartDate] = useState(userData?.PackageStartDate ?? moment(
         ) : (
           <></>
         )}
+
+        {/* ---- Package Visibility ---- */}
+        <div className="col-lg-12 mt-4">
+          <div
+            style={{
+              border: "1px solid #e0e0e0",
+              borderRadius: "8px",
+              padding: "16px",
+              backgroundColor: "#fafafa",
+            }}
+          >
+            <label className="form_text" style={{ fontSize: "16px", fontWeight: 700 }}>
+              Show this package to categories
+            </label>
+            <div className="text-muted" style={{ fontSize: "13px", marginBottom: "10px" }}>
+              Select which categories can see this package (e.g. Website, Call Center, agents).
+              Admin &amp; Managers always see all packages.
+            </div>
+            <div className="row">
+              {categoriesList.length === 0 ? (
+                <div className="col-12 text-muted" style={{ fontSize: "13px" }}>
+                  Loading categories...
+                </div>
+              ) : (
+                categoriesList.map((cat) => {
+                  const cid = Number(cat.Id ?? cat.idCategoryMaster ?? cat.categoryId);
+                  const cname =
+                    cat.Name ?? cat.Category ?? cat.categoryName ?? `Category ${cid}`;
+                  return (
+                    <div className="col-lg-4 col-md-6" key={cid}>
+                      <div className="form-check">
+                        <input
+                          className="form-check-input"
+                          type="checkbox"
+                          id={`cat-${cid}`}
+                          checked={selectedCategoryIds.includes(cid)}
+                          onChange={() => toggleCategory(cid)}
+                        />
+                        <label className="form-check-label" htmlFor={`cat-${cid}`}>
+                          {cname}
+                        </label>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
 
         {!userData ? (
           <div className="row mt-4">

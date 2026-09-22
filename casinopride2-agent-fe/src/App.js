@@ -43,6 +43,8 @@ import QrLinkPage from "./Layouts/Pages/QRLink/QrLinkPage";
 import SendAck from "./Layouts/Pages/Booking/SendAck";
 import PaymentFailure from "./Layouts/Pages/Payments/PaymentFailure";
 import AddDiscountAgent from "./Layouts/Components/AddDiscountAgent";
+import MyDiscount from "./Layouts/Pages/MyDiscount/MyDiscount";
+
 function App() {
   let { param } = useParams();
   return (
@@ -90,7 +92,7 @@ function App() {
         <Route path="/SendAck" element={<SendAck />} />
 
         <Route
-          path="/p"
+          path="/p/:param"
           element={
             <Layout>
               <QrLinkPage />
@@ -294,6 +296,14 @@ function App() {
           }
         />
 
+        <Route
+          path="/MyDiscount"
+          element={
+            <Layout>
+              <MyDiscount />
+            </Layout>
+          }
+        />
         <Route path="/PackagesPage" element={<PackagesPage />} />
 
         <Route

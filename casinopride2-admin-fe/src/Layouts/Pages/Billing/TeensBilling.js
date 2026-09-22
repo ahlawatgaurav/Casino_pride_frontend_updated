@@ -366,7 +366,7 @@
 //                 Email : info@casinoprideofficial.com
 //               </h5>
 //               <h5 style={{ fontSize: "15px" }}>
-//                 Website : www.casinoprideofficial.com
+//                 Website : www.cpofficial.in
 //               </h5>
 //               <h5 style={{ fontSize: "15px" }}>Instagram :</h5>
 //               <h5 style={{ fontSize: "12px" }}>
@@ -1365,7 +1365,7 @@ const TeensBilling = () => {
                 Email : info@casinoprideofficial.com
               </h5>
               <h5 style={{ fontSize: "15px" }}>
-                Website : www.casinoprideofficial.com
+                Website : www.cpofficial.in
               </h5>
               <h5 style={{ fontSize: "15px" }}>
                 {" "}
@@ -1665,7 +1665,7 @@ const TeensBilling = () => {
                     Email : info@casinoprideofficial.com
                   </h5>
                   <h5 className="BillPrintFontPrint">
-                    Website : www.casinoprideofficial.com
+                    Website : www.cpofficial.in
                   </h5>
                   <h5 className="BillPrintFontPrint">
                     {" "}

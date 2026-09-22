@@ -6,9 +6,11 @@ import {
   deleteCoupon,
   getagentDiscountsList,
   EditagentDiscountsFn,
+  EditUserDetails,
 } from "../../../Redux/actions/users";
 import { useDispatch } from "react-redux";
 import { useSelector } from "react-redux";
+import api from "../../../Service/api";
 import { AiFillEdit, AiFillDelete } from "react-icons/ai";
 import { Oval } from "react-loader-spinner";
 import "../../../assets/global.css";
@@ -57,6 +59,91 @@ const CouponsList = () => {
   const handlePrint = useReactToPrint({
     content: () => printableContentRef.current,
   });
+
+  const validateDetails = useSelector(
+    (state) => state.auth?.userDetailsAfterValidation
+  );
+
+  const [bookingLink, setBookingLink] = useState("");
+  const [categoryMaxDiscount, setCategoryMaxDiscount] = useState(0);
+  const [myDiscount, setMyDiscount] = useState(0);
+  const [savingDiscount, setSavingDiscount] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+
+  useEffect(() => {
+    const agentId = loginDetails?.logindata?.userId;
+    const categoryId = validateDetails?.Details?.CategoryId;
+    const token = loginDetails?.logindata?.Token;
+    if (!agentId) return;
+
+    // Fetch agent's QR link and saved discount
+    api.CORE_PORT.get(`/core/getUserById?userId=${agentId}`)
+      .then((res) => {
+        const agent = res.data?.Details;
+        if (agent) {
+          setBookingLink(agent.QRLink || "");
+          setMyDiscount(Number(agent.DiscountPercent) || 0);
+        }
+      }).catch(() => {});
+
+    // Fetch category max discount
+    if (categoryId && token) {
+      api.CORE_PORT.get("/core/categories", { headers: { AuthToken: token } })
+        .then((res) => {
+          const cats = res.data?.Details || [];
+          const match = cats.find((c) => Number(c.Id) === Number(categoryId));
+          if (match) setCategoryMaxDiscount(Number(match.DiscountPercent) || 0);
+        }).catch(() => {});
+    }
+  }, [loginDetails?.logindata?.userId, validateDetails?.Details?.CategoryId]);
+
+  // Old saved discounts could exceed the category max (e.g. 15% saved but max 10%),
+  // which showed a negative commission. Clamp the displayed/used value to the max.
+  useEffect(() => {
+    if (categoryMaxDiscount > 0 && myDiscount > categoryMaxDiscount) {
+      setMyDiscount(categoryMaxDiscount);
+    }
+  }, [categoryMaxDiscount, myDiscount]);
+
+  const handleSaveMyDiscount = () => {
+    if (myDiscount > categoryMaxDiscount) {
+      toast.error(`Max allowed is ${categoryMaxDiscount}%`);
+      return;
+    }
+    setSavingDiscount(true);
+    const data = {
+      userId: loginDetails?.logindata?.userId,
+      userRef: validateDetails?.Details?.Ref,
+      firebaseUUID: validateDetails?.Details?.UUID || "9876590",
+      name: validateDetails?.Details?.Name,
+      phone: validateDetails?.Details?.Phone,
+      email: validateDetails?.Details?.Email || "",
+      address: validateDetails?.Details?.Address || "",
+      userName: validateDetails?.Details?.Username,
+      password: validateDetails?.Details?.Password,
+      userType: validateDetails?.Details?.UserType,
+      categoryId: validateDetails?.Details?.CategoryId,
+      monthlySettlement: validateDetails?.Details?.MonthlySettlement || 0,
+      QRLink: bookingLink || validateDetails?.Details?.QRLink || "",
+      NumOfBookings: validateDetails?.Details?.NumOfBookings || 0,
+      isUserEnabled: validateDetails?.Details?.IsUserEnabled,
+      isActive: 1,
+      discountPercent: myDiscount,
+    };
+    dispatch(
+      EditUserDetails(data, loginDetails?.logindata?.Token, (callback) => {
+        setSavingDiscount(false);
+        if (callback.status) toast.success("Discount updated!");
+        else toast.error(callback.error || "Failed to update");
+      })
+    );
+  };
+
+  const copyLink = () => {
+    navigator.clipboard.writeText(bookingLink);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
+  };
 
   const fetchCouponDetails = () => {
     dispatch(
@@ -144,170 +231,95 @@ const CouponsList = () => {
 
   return (
     <div>
-      <h3 className="mb-4">Discounts List</h3>
-      <div className="container">
-        <div className="row">
-          <div className="col-md-8 col-lg-6 mb-3">
-            <div className="input-group">
-              <input
-                type="text"
-                className="form-control"
-                placeholder="Search discount"
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  filterCouponListDetails();
-                }}
-              />
-            </div>
-          </div>
-          <div className="col-md-4 col-lg-6 d-flex justify-content-end mb-3">
-            <button className="btn btn-primary">
-              <Link to="/AddDiscountAgent" className="addLinks">
-                Add Discount
-              </Link>
+      <h3 className="mb-4">Discounts</h3>
+
+      {/* Booking Link */}
+      <div style={{ background: "#e8f4fd", borderRadius: "8px", padding: "14px 16px", marginBottom: "20px", border: "1px solid #b3d9f5" }}>
+        <div style={{ fontSize: "13px", color: "#6c757d", marginBottom: "6px", fontWeight: "600" }}>YOUR BOOKING LINK</div>
+        {bookingLink ? (
+          <div className="d-flex align-items-center gap-2">
+            <input
+              type="text"
+              readOnly
+              value={bookingLink}
+              className="form-control"
+              style={{ fontSize: "13px", background: "#fff" }}
+            />
+            <button className="btn btn-sm btn-outline-primary" style={{ whiteSpace: "nowrap" }} onClick={copyLink}>
+              {linkCopied ? "✓ Copied!" : "Copy Link"}
             </button>
           </div>
-        </div>
+        ) : (
+          <div className="d-flex align-items-center gap-2">
+            <span style={{ color: "#6c757d", fontSize: "13px" }}>No booking link generated yet.</span>
+            <button
+              className="btn btn-sm btn-primary"
+              onClick={() => {
+                const name = validateDetails?.Details?.Name || "agent";
+                const id = loginDetails?.logindata?.userId;
+                const slug = name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "").substring(0, 30) + "-" + id;
+                const link = `https://booking.casinoprideofficial.com/?UserId=${id}`;
+                api.CORE_PORT.put("/core/user", {
+                  userId: id,
+                  userRef: validateDetails?.Details?.Ref,
+                  firebaseUUID: slug,
+                  name: validateDetails?.Details?.Name,
+                  phone: validateDetails?.Details?.Phone,
+                  email: validateDetails?.Details?.Email || "",
+                  address: validateDetails?.Details?.Address || "",
+                  userName: validateDetails?.Details?.Username,
+                  password: validateDetails?.Details?.Password,
+                  userType: validateDetails?.Details?.UserType,
+                  categoryId: validateDetails?.Details?.CategoryId,
+                  monthlySettlement: validateDetails?.Details?.MonthlySettlement || 0,
+                  QRLink: link,
+                  NumOfBookings: validateDetails?.Details?.NumOfBookings || 0,
+                  isUserEnabled: validateDetails?.Details?.IsUserEnabled,
+                  isActive: 1,
+                  discountPercent: myDiscount,
+                }, { headers: { AuthToken: loginDetails?.logindata?.Token } })
+                .then(() => {
+                  setBookingLink(link);
+                  toast.success("Booking link generated!");
+                }).catch(() => toast.error("Failed to generate link"));
+              }}
+            >
+              Generate Link
+            </button>
+          </div>
+        )}
       </div>
-      <table class="table">
-        <thead>
-          <tr>
-            <th scope="col" className="text-center table_heading">
-              Discount Percent
-            </th>
 
-            <th scope="col" className="text-center table_heading">
-              Status
-            </th>
-            <th scope="col" className="text-center table_heading">
-              Edit
-            </th>
+      {/* My Discount Setting */}
+      {categoryMaxDiscount > 0 && (
+        <div style={{ background: "#f8f9fa", borderRadius: "8px", padding: "16px", marginBottom: "24px", border: "1px solid #dee2e6" }}>
+          <div style={{ fontSize: "13px", color: "#6c757d", fontWeight: "600", marginBottom: "10px" }}>
+            MY BOOKING LINK DISCOUNT &nbsp;
+            <span style={{ color: "#0d6efd" }}>(Max: {categoryMaxDiscount}%)</span>
+          </div>
+          <div className="d-flex align-items-center gap-3">
+            <input
+              type="range"
+              className="form-range"
+              min="0"
+              max={categoryMaxDiscount}
+              step="1"
+              value={myDiscount}
+              onChange={(e) => setMyDiscount(Number(e.target.value))}
+              style={{ flex: 1 }}
+            />
+            <span style={{ fontWeight: "bold", fontSize: "18px", color: "#0d6efd", minWidth: "45px" }}>{myDiscount}%</span>
+            <button className="btn btn-sm btn-primary" onClick={handleSaveMyDiscount} disabled={savingDiscount}>
+              {savingDiscount ? "Saving..." : "Save"}
+            </button>
+          </div>
+          <div className="d-flex justify-content-between mt-2" style={{ fontSize: "12px" }}>
+            <span style={{ color: "#198754" }}>Customer gets: <strong>{myDiscount}% off</strong></span>
+            <span style={{ color: "#dc3545" }}>Your commission: <strong>{Math.max(0, categoryMaxDiscount - myDiscount)}%</strong></span>
+          </div>
+        </div>
+      )}
 
-            <th scope="col" className="text-center table_heading">
-              Click on QR to download
-            </th>
-
-            <th scope="col" className="text-center table_heading">
-              Discount Code
-            </th>
-            <th scope="col" className="text-center table_heading">
-              Print
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {loading ? (
-            <tr>
-              <td colSpan="4" className="text-center">
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    height: "100%",
-                  }}
-                >
-                  <Oval
-                    height={80}
-                    width={50}
-                    color="#4fa94d"
-                    visible={true}
-                    ariaLabel="oval-loading"
-                    secondaryColor="#4fa94d"
-                    strokeWidth={2}
-                    strokeWidthSecondary={2}
-                  />
-                </div>
-              </td>
-            </tr>
-          ) : filteredCouponDetails.length === 0 ? (
-            <tr>
-              <td colSpan="4" className="text-center">
-                No data found.
-              </td>
-            </tr>
-          ) : (
-            filteredCouponDetails.map((item) => (
-              <tr key={item.id}>
-                <td className="manager-list ">{item.DiscountPercent}</td>
-
-                <td className="manager-list">
-                  {item.IsAgentDiscountEnabled === 1 ? (
-                    <span style={{ color: "green" }}>Active</span>
-                  ) : (
-                    <span style={{ color: "red" }}>In Active</span>
-                  )}
-                </td>
-
-                <td className="manager-list">
-                  <input
-                    className="form-check-input"
-                    type="checkbox"
-                    id="switch"
-                    checked={item.IsAgentDiscountEnabled === 1}
-                    onChange={() => onEditCoupon(item)}
-                  />
-                </td>
-
-                <td
-                  className="manager-list"
-                  //    onClick={() => handleViewMore(item)}
-                >
-                  {item?.QRFile != null ? (
-                    <div
-                      onClick={() => {
-                        open(item?.QRFile, item?.DiscountPercent);
-                      }}
-                    >
-                      {" "}
-                      <img
-                        style={{ width: 40, height: 40 }}
-                        src={item?.QRFile}
-                        alt="Description of the image"
-                      />
-                    </div>
-                  ) : (
-                    <></>
-                  )}
-                </td>
-                <td className="manager-list">{item?.DiscountCode}</td>
-                <td className="manager-list" style={{ textAlign: "center" }}>
-                  <AiOutlinePrinter
-                    style={{ height: "22px", width: "22px" }}
-                    onClick={async () => {
-                      await setselected(item);
-                      handlePrint();
-                    }}
-                  />
-                </td>
-
-                {/* <td className="manager-list">
-                  <div className="row">
-                    <div className="col-lg-4">
-                      <Link
-                        to="/AddPackage"
-                        state={{ userData: item }}
-                        className="links"
-                      >
-                        <AiFillEdit />
-                      </Link>
-                    </div>
-                    <div className="col-lg-4">
-                      <AiFillDelete onClick={() => handleShow(item.Id)} />
-                    </div>
-                    <div
-                      className="col-lg-4"
-                      onClick={() => handleViewMore(item)}
-                    >
-                      View more
-                    </div>
-                  </div>
-                </td> */}
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
       <ToastContainer />
       <div style={{ display: "none" }}>
         <div

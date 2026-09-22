@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import {
   AddDiscountOnPanelFn,
@@ -45,18 +45,34 @@ const AddDiscountAgent = () => {
     userData?.IsAgentDiscountEnabled ? userData?.IsAgentDiscountEnabled : 0
   );
 
+  const [categoryMaxDiscount, setCategoryMaxDiscount] = useState(0);
+
+  useEffect(() => {
+    const categoryId = validateDetails?.Details?.CategoryId;
+    if (!categoryId) return;
+    import("../../Service/api").then(({ default: api }) => {
+      api.CORE_PORT.get("/core/categories", {
+        headers: { AuthToken: loginDetails?.logindata?.Token },
+      }).then((res) => {
+        const cats = res.data?.Details || [];
+        const match = cats.find((c) => Number(c.Id) === Number(categoryId));
+        if (match) setCategoryMaxDiscount(Number(match.DiscountPercent || 0));
+      }).catch(() => {});
+    });
+  }, [validateDetails?.Details?.CategoryId]);
+
   const handleToggle = () => {
     setIsChecked(!isChecked);
   };
 
   const handleDiscountChange = (e) => {
     let inputValue = parseFloat(e.target.value);
+    const maxAllowed = categoryMaxDiscount || 0;
 
     if (isNaN(inputValue) || inputValue < 0) {
       inputValue = "";
-    } else if (inputValue > validateDetails?.Details?.DiscountPercent) {
-      //checking if the discount that is added is more than the discount percent of the agent
-      inputValue = validateDetails?.Details?.DiscountPercent;
+    } else if (maxAllowed > 0 && inputValue > maxAllowed) {
+      inputValue = maxAllowed;
     }
     setDiscountAmount(inputValue);
   };
@@ -186,7 +202,7 @@ const AddDiscountAgent = () => {
             class="form-control mt-2"
             value={discountAmount}
             type="number"
-            placeholder="Enter Discount % "
+            placeholder={`Enter Discount % (max ${categoryMaxDiscount}%)`}
             onChange={(e) => handleDiscountChange(e)}
             defaultValue={userData?.DiscountPercent}
           />

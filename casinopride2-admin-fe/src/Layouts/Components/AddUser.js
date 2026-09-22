@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from "react";
+import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai";
 import { useLocation } from "react-router-dom";
 import {
   AddUserDetails,
   EditUserDetails,
   addQrCodeLink,
+  getAllCategories,
 } from "../../Redux/actions/users";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
@@ -18,8 +20,8 @@ const AddUser = () => {
   const location = useLocation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { userType } = location.state;
-  const { userData } = location.state;
+  const { userData } = location.state || {};
+  const userType = location.state?.userType || userData?.UserType;
 
   console.log("<--------userType------->", userType);
 
@@ -38,6 +40,7 @@ const AddUser = () => {
   const [userName, setUsername] = useState(
     userData?.Username ? userData?.Username : ""
   );
+  const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState(
     userData?.Password ? userData?.Password : ""
   );
@@ -48,11 +51,30 @@ const AddUser = () => {
     userData?.MonthlySettlement ? userData?.MonthlySettlement : 0
   );
 
+  const [category, setCategory] = useState(
+    userData?.CategoryId || location.state?.categoryId || ""
+  );
+  const [categories, setCategories] = useState([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
+
   const [isChecked, setIsChecked] = useState(
     userData?.IsUserEnabled ? userData?.IsUserEnabled : 0
   );
 
   const [disableAddUserButton, setDisableAddUserButton] = useState(false);
+
+  useEffect(() => {
+    if (loginDetails?.logindata?.Token) {
+      dispatch(
+        getAllCategories(loginDetails?.logindata?.Token, (callback) => {
+          setLoadingCategories(false);
+          if (callback.status) {
+            setCategories(callback?.response?.Details || []);
+          }
+        })
+      );
+    }
+  }, [dispatch, loginDetails]);
 
   const isValidEmail = (email) => {
     const emailPattern = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
@@ -96,20 +118,17 @@ const AddUser = () => {
       (userType == 5 && password == "") ||
       (userType == 6 && discountPercent == "") ||
       (userType == 7 && userName == "") ||
-      (userType == 7 && password == "")
+      (userType == 7 && password == "") ||
+      (userType == 9 && userName == "") ||
+      (userType == 9 && password == "")
     ) {
       toast.warning("Please enter all the fields");
       setDisableAddUserButton(false);
     }
-
-    // else if (phone.length > 10 || phone.length < 10) {
-    //   toast.warning("Please enter a valid phone number (up to 10 digits)");
-    // }
-    // else if (!isValidPassword(password)) {
-    //   toast.warning(
-    //     "Password must contain at least one uppercase letter, one digit, and one special character"
-    //   );
-    // }
+    else if (password && !isValidPassword(password)) {
+      toast.warning("Password must be 8+ chars with uppercase, number & special character (@$!%*?&)");
+      setDisableAddUserButton(false);
+    }
     else {
       const data = {
         firebaseUUID: "9876590",
@@ -124,6 +143,7 @@ const AddUser = () => {
         monthlySettlement: monthlysettlement,
         isUserEnabled: 1,
         isActive: 1,
+        categoryId: category ? Number(category) : null,
       };
 
       dispatch(
@@ -204,7 +224,6 @@ const AddUser = () => {
               toast.success("User Added");
             }
 
-            toast.error(callback.error);
           } else {
             toast.error(callback.error);
             setDisableAddUserButton(false);
@@ -249,6 +268,7 @@ const AddUser = () => {
         userRef: userData?.Ref,
         isUserEnabled: isChecked,
         isActive: 1,
+        categoryId: category ? Number(category) : null,
       };
 
       dispatch(
@@ -257,9 +277,9 @@ const AddUser = () => {
             toast.success("User Edited");
             navigate(-1);
             setDisableAddUserButton(false);
-            toast.error(callback.error);
           } else {
             toast.error(callback.error);
+            setDisableAddUserButton(false);
           }
         })
       );
@@ -345,6 +365,11 @@ const AddUser = () => {
         ) : (
           <></>
         )}
+        {userType == 9 ? (
+          <h3 className="mb-4">{userData ? "Edit CRM Manager" : "Add CRM Manager"}</h3>
+        ) : (
+          <></>
+        )}
         {userType == 3 ? (
           <h3 className="mb-4">{userData ? "Edit GRE" : "Add GRE"}</h3>
         ) : (
@@ -360,7 +385,7 @@ const AddUser = () => {
 
         {userType == 5 ? (
           <h3 className="mb-4">
-            {userData ? "Edit  Travel Agent" : "Add Travel Agent"}
+            {userData ? "Edit Agent" : "Add Agent"}
           </h3>
         ) : (
           <></>
@@ -485,44 +510,32 @@ const AddUser = () => {
             <label for="formGroupExampleInput " className="form_text">
               Password <span style={{ color: "red" }}>*</span>
             </label>
-            <input
-              class="form-control mt-2"
-              type="text"
-              placeholder="password"
-              onChange={(e) => setPassword(e.target.value)}
-              defaultValue={userData?.Password}
-            />
+            <div style={{ position: "relative" }}>
+              <input
+                className="form-control mt-2"
+                type={showPassword ? "text" : "password"}
+                placeholder="Enter password"
+                onChange={(e) => setPassword(e.target.value)}
+                defaultValue={userData?.Password}
+                style={{ paddingRight: "40px" }}
+              />
+              <span
+                onClick={() => setShowPassword(!showPassword)}
+                style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", cursor: "pointer", color: "#6c757d", fontSize: "18px" }}
+              >
+                {showPassword ? <AiOutlineEyeInvisible /> : <AiOutlineEye />}
+              </span>
+            </div>
+            <small style={{ color: password && !isValidPassword(password) ? "#dc3545" : "#6c757d", fontSize: "12px" }}>
+              Min 8 chars · 1 uppercase · 1 number · 1 special character (@$!%*?&)
+            </small>
           </div>
         )}
 
+        {/* Agent sets their own discount from agent panel */}
         {userType == "5" ||
-        userType == "6" ||
-        userData?.UserType == "5" ||
-        userData?.UserType == "6" ? (
-          <div className="col-lg-6 mt-3">
-            {userType == "5" || userData?.UserType == "5" ? (
-              <label for="formGroupExampleInput " className="form_text">
-                Travel Agent Commission <span style={{ color: "red" }}>*</span>
-              </label>
-            ) : (
-              <label for="formGroupExampleInput " className="form_text">
-                Discount Percentage <span style={{ color: "red" }}>*</span>
-              </label>
-            )}
-            <input
-              class="form-control mt-2"
-              type="number"
-              placeholder="Discount Percentage"
-              onChange={(e) => setDiscountPercent(e.target.value)}
-              defaultValue={userData?.DiscountPercent}
-            />
-          </div>
-        ) : (
-          <></>
-        )}
-        {userType == "5" ||
-        userData?.UserType == "5" ||
-        userData?.UserType == "6" ? (
+          userData?.UserType == "5" ||
+          userData?.UserType == "6" ? (
           <div className="col-lg-6 mt-3">
             <label for="formGroupExampleInput " className="form_text">
               Monthly settlement
@@ -536,6 +549,29 @@ const AddUser = () => {
               onChange={(e) => setMonrhtlysettlement(e.target.value)}
               defaultValue={userData?.MonthlySettlement}
             />
+          </div>
+        ) : (
+          <></>
+        )}
+
+        {/* Category applies only to agents (category-based), not staff (Admin/Manager/GRE/Accounts) */}
+        {[2, 3, 4, 5, 6, 8].includes(Number(userType)) ? (
+          <div className="col-lg-6 mt-3">
+            <label className="form_text">Category</label>
+            <select
+              className="form-control mt-2"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+            >
+              <option value="">{loadingCategories ? "Loading..." : "Select Category"}</option>
+              {categories
+                .filter((cat) => String(cat.Name).toLowerCase() !== "website")
+                .map((cat) => (
+                  <option key={cat.Id} value={cat.Id}>
+                    {cat.Name}
+                  </option>
+                ))}
+            </select>
           </div>
         ) : (
           <></>

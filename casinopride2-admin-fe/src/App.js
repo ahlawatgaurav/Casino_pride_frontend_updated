@@ -43,6 +43,11 @@ import QrLinkPage from "./Layouts/Pages/QRLink/QrLinkPage";
 import LocalAgentList from "./Layouts/Pages/Users/LocalAgentList";
 import AcknowledgementDetails from "./Layouts/Pages/Ack/AcknowledgementDetails";
 import UpdateBooking from "./Layouts/Components/UpdateBooking";
+import ProfileList from "./Layouts/Pages/Profiles/ProfileList";
+import AddEditProfile from "./Layouts/Pages/Profiles/AddEditProfile";
+import CategoryList from "./Layouts/Pages/Categories/CategoryList";
+import AddEditCategory from "./Layouts/Pages/Categories/AddEditCategory";
+import ReportPage from "./Layouts/Pages/Reports/ReportPage";
 function App() {
   let { param } = useParams();
   return (
@@ -332,6 +337,51 @@ function App() {
           element={
             <Layout>
               <LocalAgentList />
+            </Layout>
+          }
+        />
+
+        <Route
+          path="/ProfileList"
+          element={
+            <Layout>
+              <ProfileList />
+            </Layout>
+          }
+        />
+
+        <Route
+          path="/AddProfile"
+          element={
+            <Layout>
+              <AddEditProfile />
+            </Layout>
+          }
+        />
+
+        <Route
+          path="/CategoryList"
+          element={
+            <Layout>
+              <CategoryList />
+            </Layout>
+          }
+        />
+
+        <Route
+          path="/AddCategory"
+          element={
+            <Layout>
+              <AddEditCategory />
+            </Layout>
+          }
+        />
+
+        <Route
+          path="/Reports"
+          element={
+            <Layout>
+              <ReportPage />
             </Layout>
           }
         />

@@ -129,6 +129,63 @@ export const deleteUser = (token, userId, callback) => async (dispatch) => {
     });
 };
 
+export const getAllCategories = (token, callback) => async (dispatch) => {
+  api.CORE_PORT.get("/core/categories", {
+    headers: { AuthToken: token },
+  })
+    .then((response) => {
+      console.log("Get categories ->", response.data);
+      if (response.data?.Details) {
+        callback({
+          status: true,
+          response: response?.data,
+        });
+      } else if (response.data?.Error) {
+        callback({
+          status: false,
+          error: response.data?.Error?.ErrorMessage,
+        });
+      }
+    })
+    .catch((err) => {
+      console.log("error", err);
+    });
+};
+
+export const getCategoryPackages = (token, categoryId, callback) => async (dispatch) => {
+  api.CORE_PORT.get(`/core/categoryPackages?categoryId=${Number(categoryId)}`, {
+    headers: { AuthToken: token },
+  })
+    .then((response) => {
+      if (response.data?.Details) {
+        callback({ status: true, response: response?.data });
+      } else if (response.data?.Error) {
+        callback({ status: false, error: response.data?.Error?.ErrorMessage });
+      }
+    })
+    .catch((err) => {
+      console.log("error", err);
+      callback({ status: false, error: "Failed to fetch category packages" });
+    });
+};
+
+export const updateCategoryPackages = (token, data, callback) => async (dispatch) => {
+  api.CORE_PORT.post("/core/categoryPackages", data, {
+    headers: { AuthToken: token },
+  })
+    .then((response) => {
+      if (response.data?.Details) {
+        callback({ status: true, response: response?.data });
+      } else if (response.data?.Error) {
+        callback({ status: false, error: response.data?.Error?.ErrorMessage });
+      }
+    })
+    .catch((err) => {
+      console.log("error", err);
+      callback({ status: false, error: "Failed to update category packages" });
+    });
+};
+
 export const getPackageDetails =
   (token, usertype, callback) => async (dispatch) => {
     console.log(token);
@@ -268,7 +325,7 @@ export const getCouponDetails =
   };
 
 export const fetchAgentSettlement =
-  (token, date,userTypeId, callback) => async (dispatch) => {
+  (token, date, userTypeId, callback) => async (dispatch) => {
     api.CORE_PORT.get(`/core/getAgentSettlements?bookingDate=${date}&userTypeId=${userTypeId}`, {
       headers: { AuthToken: token },
     })
@@ -598,11 +655,12 @@ export const EditPanelDiscounts =
       });
   };
 
-  export const getUserByPhone =
+export const getUserByPhone =
   (token, phone, callback) => async (dispatch) => {
     console.log(token);
 
-    api.BOOKING_PORT.get(`/booking/getUserByPhone?phone=${phone}`, {
+    // IMPORTANT: use coreservice lookup so we get the customer's CategoryId (needed for package filtering)
+    api.CORE_PORT.get(`/core/getUserByPhone?phone=${phone}`, {
       headers: { AuthToken: token },
     })
       .then((response) => {
@@ -656,7 +714,7 @@ export const getCouponsbyInitials =
       });
   };
 
-  export const getDiscountsUsingDiscountCode = 
+export const getDiscountsUsingDiscountCode =
   (token, discountCode, callback) => async (dispatch) => {
     api.CORE_PORT.get(
       `/core/agentDiscountsUsingDiscountCode?agentDiscountCode=${discountCode}`,
@@ -664,21 +722,21 @@ export const getCouponsbyInitials =
         headers: { AuthToken: token },
       }
     )
-    .then((response) => {
-      console.log("Get Discount using Discount Code ->", response.data);
-      if (response.data?.Details) {
-        console.log(response.data?.Details);
-        callback({
-          status: true,
-          response: response?.data,
-        });
-      } else if (response.data?.Error) {
-        callback({
-          status: false,
-          error: response.data?.Error?.ErrorMessage,
-        });
-      }
-    });
+      .then((response) => {
+        console.log("Get Discount using Discount Code ->", response.data);
+        if (response.data?.Details) {
+          console.log(response.data?.Details);
+          callback({
+            status: true,
+            response: response?.data,
+          });
+        } else if (response.data?.Error) {
+          callback({
+            status: false,
+            error: response.data?.Error?.ErrorMessage,
+          });
+        }
+      });
   }
 
 export const getPanelDiscounts = (token, callback) => async (dispatch) => {
@@ -796,6 +854,35 @@ export const getFutureBookingDatesDetails =
         console.log(" Get future Booking Date ->", response.data);
         if (response.data?.Details) {
           console.log(response.data?.Details);
+          callback({
+            status: true,
+            response: response?.data,
+          });
+        } else if (response.data?.Error) {
+          callback({
+            status: false,
+            error: response.data?.Error?.ErrorMessage,
+          });
+        }
+      })
+      .catch((err) => {
+        {
+          console.log("error", err);
+        }
+      });
+  };
+
+export const deleteFutureBookingDatePeriod =
+  (token, blockedDateId, callback) => async (dispatch) => {
+    api.CORE_PORT.delete(
+      `/core/futureBookingDate?blockedDateId=${blockedDateId}`,
+      {
+        headers: { AuthToken: token },
+      }
+    )
+      .then((response) => {
+        console.log("Delete future booking date period ->", response.data);
+        if (response.data?.Details) {
           callback({
             status: true,
             response: response?.data,
@@ -1193,8 +1280,58 @@ export const countDriverBookings = (data, callback) => async (dispatch) => {
       }
     })
     .catch((err) => {
-      {
-        console.log("error", err);
+      console.log("error", err);
+    });
+};
+
+export const updateCategoryDiscount = (data, token, callback) => async (dispatch) => {
+  api.CORE_PORT.put("/core/categoryDiscount", data, {
+    headers: { AuthToken: token },
+  })
+    .then((response) => {
+      if (response.data?.Details) {
+        callback({
+          status: true,
+          response: response?.data,
+        });
+      } else if (response.data?.Error) {
+        callback({
+          status: false,
+          error: response.data?.Error?.ErrorMessage,
+        });
       }
+    })
+    .catch((err) => {
+      console.log("error", err);
+      callback({
+        status: false,
+        error: "An error occurred while updating category discount",
+      });
+    });
+};
+
+export const addCategory = (data, token, callback) => async (dispatch) => {
+  api.CORE_PORT.post("/core/categories", data, {
+    headers: { AuthToken: token },
+  })
+    .then((response) => {
+      if (response.data?.Details) {
+        callback({
+          status: true,
+          response: response?.data,
+        });
+      } else if (response.data?.Error) {
+        callback({
+          status: false,
+          error: response.data?.Error?.ErrorMessage,
+        });
+      }
+    })
+    .catch((err) => {
+      console.log("error", err);
+      callback({
+        status: false,
+        error: "An error occurred while adding category",
+      });
     });
 };

@@ -1,0 +1,222 @@
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700&display=swap");
+
+.rp-root {
+  background: #0a0a0a;
+  min-height: 100vh;
+  padding: 28px 20px;
+  font-family: "Montserrat", sans-serif;
+  color: #ffffff;
+}
+
+/* ── Page title ───────────────────────────────────────────── */
+.rp-title {
+  font-family: "Merriweather", serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: #cbb883;
+  letter-spacing: 0.5px;
+  margin: 0;
+}
+
+.rp-export-btn {
+  background: #cbb883;
+  color: #000000;
+  border: 2px solid #cbb883;
+  font-weight: 700;
+  font-size: 13px;
+  text-transform: uppercase;
+  padding: 8px 22px;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: 0.25s;
+}
+.rp-export-btn:hover {
+  background: transparent;
+  color: #cbb883;
+}
+
+/* ── Filter card ──────────────────────────────────────────── */
+.rp-filter-card {
+  background: #111111;
+  border: 1px solid #cbb883;
+  border-radius: 0;
+  padding: 22px 24px;
+  margin-bottom: 24px;
+}
+
+.rp-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #cbb883;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.rp-input,
+.rp-select {
+  background: #1a1a1a !important;
+  border: 1px solid #cbb883 !important;
+  border-radius: 0 !important;
+  color: #ffffff !important;
+  font-size: 14px !important;
+  font-family: "Montserrat", sans-serif !important;
+  padding: 10px 14px !important;
+  width: 100%;
+  outline: none;
+}
+.rp-input:focus,
+.rp-select:focus {
+  border-color: #ffffff !important;
+  box-shadow: none !important;
+}
+.rp-input::placeholder {
+  color: #666 !important;
+}
+.rp-select option {
+  background: #1a1a1a;
+  color: #ffffff;
+}
+
+.rp-search-btn {
+  background: #cbb883;
+  color: #000000;
+  border: 2px solid #cbb883;
+  font-weight: 700;
+  font-size: 13px;
+  text-transform: uppercase;
+  padding: 10px 32px;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: 0.25s;
+  width: 100%;
+}
+.rp-search-btn:hover:not(:disabled) {
+  background: transparent;
+  color: #cbb883;
+}
+.rp-search-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Summary cards ────────────────────────────────────────── */
+.rp-summary-card {
+  background: #111111;
+  border: 1px solid #cbb883;
+  border-radius: 0;
+  padding: 24px 16px;
+  text-align: center;
+}
+.rp-summary-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #888;
+  margin-bottom: 8px;
+}
+.rp-summary-value {
+  font-size: 32px;
+  font-weight: 800;
+  color: #cbb883;
+  font-family: "Merriweather", serif;
+  margin: 0;
+}
+
+/* ── Section cards (tables) ───────────────────────────────── */
+.rp-section-card {
+  background: #111111;
+  border: 1px solid #cbb883;
+  border-radius: 0;
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+
+.rp-section-header {
+  background: #cbb883;
+  padding: 12px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.rp-section-header-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #000000;
+  margin: 0;
+}
+.rp-section-header-meta {
+  font-size: 12px;
+  color: #333333;
+  font-weight: 600;
+}
+
+/* ── Tables ───────────────────────────────────────────────── */
+.rp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.rp-table th {
+  background: #1e1a0e;
+  color: #cbb883;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 11px 14px;
+  border-bottom: 1px solid #cbb883;
+  white-space: nowrap;
+}
+.rp-table td {
+  color: #dddddd;
+  padding: 10px 14px;
+  border-bottom: 1px solid #222222;
+}
+.rp-table tbody tr:hover td {
+  background: #1a1a0e;
+  color: #ffffff;
+}
+.rp-table tfoot td {
+  background: #1e1a0e;
+  color: #cbb883;
+  font-weight: 700;
+  border-top: 1px solid #cbb883;
+  padding: 11px 14px;
+}
+
+/* ── Category badge ───────────────────────────────────────── */
+.rp-badge {
+  display: inline-block;
+  padding: 3px 12px;
+  border: 1px solid #cbb883;
+  color: #cbb883;
+  font-size: 12px;
+  font-weight: 600;
+  background: transparent;
+}
+
+/* ── Spinner / empty state ────────────────────────────────── */
+.rp-spinner-wrap {
+  text-align: center;
+  padding: 60px 0;
+  color: #cbb883;
+}
+.rp-empty {
+  text-align: center;
+  padding: 50px 0;
+  color: #555;
+  font-size: 14px;
+}
+
+/* ── Gold divider ─────────────────────────────────────────── */
+.rp-divider {
+  border: none;
+  border-top: 1px solid #cbb883;
+  margin: 4px 0 0;
+  opacity: 0.4;
+}

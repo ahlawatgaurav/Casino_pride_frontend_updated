@@ -10,6 +10,9 @@ export const OTPpackage = ({
   setSelectedPackages,
   selectedPackages,
   handleBookNow,
+  isCallCenter = false,
+  packageDiscounts = {},
+  onDiscountChange,
 }) => {
   const [showModal, setShowModal] = useState(false);
 
@@ -53,7 +56,7 @@ export const OTPpackage = ({
               <div className="col-md-6 col-lg-3">
                 <div className="image-container d-flex flex-column align-items-center">
                   <img
-                    src="https://www.casinoprideofficial.com/assets/images/red-carpet.png"
+                    src="/assets/images/red-carpet.png"
                     alt="Image 1"
                     className="img-fluid package_card_image"
                   />
@@ -70,7 +73,7 @@ export const OTPpackage = ({
               <div className="col-md-6 col-lg-4">
                 <div className="image-container d-flex flex-column align-items-center">
                   <img
-                    src="https://www.casinoprideofficial.com/assets/images/buffet.png"
+                    src="/assets/images/buffet.png"
                     alt="Image 2"
                     className="img-fluid package_card_image"
                   />
@@ -88,7 +91,7 @@ export const OTPpackage = ({
               <div className="col-md-6 col-lg-4">
                 <div className="image-container d-flex flex-column align-items-center">
                   <img
-                    src="https://www.casinoprideofficial.com/assets/images/bonus.png"
+                    src="/assets/images/bonus.png"
                     alt="Image 3"
                     className="img-fluid package_card_image"
                   />

@@ -875,7 +875,7 @@
 //                   Email : info@casinoprideofficial.com
 //                 </h5>
 //                 <h5 style={{ fontSize: "15px" }}>
-//                   Website : www.casinoprideofficial.com
+//                   Website : www.cpofficial.in
 //                 </h5>
 //                 <h5 style={{ fontSize: "15px" }}>
 //                   Instagram : casinoprideofficial
@@ -1623,7 +1623,7 @@
 //                         marginBottom: "5px",
 //                       }}
 //                     >
-//                       Website : www.casinoprideofficial.com
+//                       Website : www.cpofficial.in
 //                     </h5>
 //                     <h5
 //                       className="BillPrintFontPrint"
@@ -2293,6 +2293,7 @@
 //not to fixed
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import html2pdf from "html2pdf.js";
+import api from "../../../Service/api";
 import "../../../assets/Billing.css";
 import { useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -2359,6 +2360,48 @@ const BillingDetails = () => {
     "totalDiscount-----------------||||||||||||||||||||||||||||||||||||||||||||||||||>",
     totalDiscount
   );
+
+  // When a discount is applied, it is subtracted only from the final Bill Amount
+  // while the taxable base (Rate) and tax (CGST/SGST/VAT via TaxDiff/TaxBifurcation)
+  // stay at their pre-discount values, so the printed rows do not reconcile with
+  // the Bill Amount. This scales the displayed base & tax by the same proportion the
+  // discount reduces the bill, so the invoice adds up correctly (tax on the discounted
+  // amount). Price is intentionally NOT scaled because the Bill Amount calc already
+  // subtracts the discount from Price. Returns a NEW object (no mutation of source state).
+  const __scaleItemForBill = (item) => {
+    try {
+      const id = item?.ItemDetails;
+      if (!id) return item;
+      const gross =
+        (Array.isArray(id.packageGuestCount) ? id.packageGuestCount : []).reduce(
+          (a, c, i) => a + c * (id.Price && id.Price[i] ? id.Price[i] : 0),
+          0
+        ) + (item?.TeensPrice || 0);
+      const isDeduct =
+        (Array.isArray(id.IsDeductable) ? id.IsDeductable[0] : id.IsDeductable) === 1;
+      const disc =
+        isDeduct && item?.AmountAfterDiscount > 0
+          ? (item?.ActualAmount || 0) - (item?.AmountAfterDiscount || 0)
+          : 0;
+      const factor = gross > 0 ? (gross - disc) / gross : 1;
+      if (!(factor < 1)) return item;
+      const scale = (arr) =>
+        Array.isArray(arr) ? arr.map((v) => v * factor) : arr;
+      return {
+        ...item,
+        TeensRate: (item?.TeensRate || 0) * factor,
+        TeensTaxBifurcation: (item?.TeensTaxBifurcation || 0) * factor,
+        ItemDetails: {
+          ...id,
+          Rate: scale(id.Rate),
+          TaxDiff: scale(id.TaxDiff),
+          TaxBifurcation: scale(id.TaxBifurcation),
+        },
+      };
+    } catch (e) {
+      return item;
+    }
+  };
 
   const dummyLink = "http://13.235.27.91:5858/p/4r4";
   const Bookinglink = "https://bit.ly/3trchox";
@@ -2653,23 +2696,27 @@ const BillingDetails = () => {
                         let shortUrl = callback?.response?.shortUrl;
                       
 
-                        const apiUrl = `https://commnestsms.com/api/push.json?apikey=635cd8e64fddd&route=transactional&sender=CPGOAA&mobileno=${BookingDetails[0]?.Phone}&text=Thank%20you%20for%20choosing%20Casino%20Pride.%20View%20e-bill%20of%20Rs%20${FinalAmount}%20at%20-%20${shortUrl}%0ALets%20Play%20with%20Pride%20!%0AGood%20luck%20!%0ACPGOAA`;
-
-                        fetch(apiUrl)
-                          .then((response) => {
-                            if (!response.ok) {
-                              throw new Error(
-                                `HTTP error! Status: ${response.status}`
-                              );
-                            }
-                            return response.json(); // Parse the JSON response
-                          })
-                          .then((data) => {
-                            console.log(data); // Handle the parsed JSON data here
+                        // Send the SMS from the BACKEND (server-side) so it does not depend
+                        // on the browser reaching commnestsms.com directly (CORS / blockers /
+                        // navigation aborting the request). The backend calls the provider.
+                        api.BILLING_PORT.post(
+                          "/billing/sendSMS",
+                          {
+                            phone: BookingDetails[0]?.Phone,
+                            amount: FinalAmount,
+                            shortUrl: shortUrl,
+                          },
+                          {
+                            headers: {
+                              AuthToken: loginDetails?.logindata?.Token,
+                            },
+                          }
+                        )
+                          .then(() => {
                             toast.success("Details sent to customer");
                           })
                           .catch((error) => {
-                            console.error("Fetch error:", error);
+                            console.error("SMS error:", error);
                             toast.success("Details sent to customer");
                           });
 
@@ -3616,6 +3663,7 @@ const BillingDetails = () => {
             BookingDetails?.map(
               (item) => (
                 console.log("ITEMMMM-->>>", item),
+                (item = __scaleItemForBill(item)),
                 (
                   <div
                     className="thermal-bill"
@@ -3657,7 +3705,7 @@ const BillingDetails = () => {
                       Email : info@casinoprideofficial.com
                     </h5>
                     <h5 style={{ fontSize: "15px" }}>
-                      Website : www.casinoprideofficial.com
+                      Website : www.cpofficial.in
                     </h5>
                     <h5 style={{ fontSize: "15px" }}>
                       Instagram : casinoprideofficial
@@ -3752,7 +3800,7 @@ const BillingDetails = () => {
                             style={{ fontWeight: "bold" }}
                             className="BillPrintFont"
                           >
-                            {item.TotalGuestCount}
+                            {item.TotalGuestCount - (BookingDetails[0].NumOfTeens || 0)}
                           </span>
                         </p>
                         <p className="BillPrintFont">
@@ -4874,7 +4922,7 @@ const BillingDetails = () => {
                         marginBottom: "5px",
                       }}
                     >
-                      Website : www.casinoprideofficial.com
+                      Website : www.cpofficial.in
                     </h5>
                     <h5
                       className="BillPrintFontPrint"
@@ -5001,7 +5049,7 @@ const BillingDetails = () => {
                         <p className="BillPrintFontPrint">
                           Total Number of Guests :{" "}
                           <span className="BillPrintFontPrint">
-                            {item.TotalGuestCount}
+                            {item.TotalGuestCount - (BookingDetails[0].NumOfTeens || 0)}
                           </span>
                         </p>
                         <p className="BillPrintFontPrint">

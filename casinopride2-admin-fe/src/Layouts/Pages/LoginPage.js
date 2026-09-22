@@ -31,6 +31,14 @@ function LoginPage() {
   console.log("Login Details------>", loginDetails?.logindata);
   console.log("validate Details--->", validateDetails);
 
+  const isCallCenterUser = (user) => {
+    const categoryName = String(
+      user?.CategoryName || user?.Category || user?.CategoryTitle || ""
+    ).toLowerCase();
+
+    return categoryName.includes("call center") || categoryName.includes("call centre");
+  };
+
   const onsubmit = () => {
     setLoading(true);
     const data = {
@@ -42,13 +50,19 @@ function LoginPage() {
       Login(data, (callback) => {
         if (callback.status) {
           toast.success("Welcome to casino pride");
+          const loggedInUser = callback?.response?.Details?.logindata;
+          const validatedUser = callback?.validateDetails;
 
-          if (loginDetails?.logindata?.UserType == "7") {
+          if (isCallCenterUser(loggedInUser) || isCallCenterUser(validatedUser)) {
+            navigate("NewBooking");
+          } else if (loggedInUser?.UserType == "7") {
             navigate("BillingList");
-          } else if (loginDetails?.logindata?.UserType == "4") {
+          } else if (loggedInUser?.UserType == "4") {
             navigate("CouponsList");
-          } else if (loginDetails?.logindata?.UserType == "2") {
+          } else if (loggedInUser?.UserType == "2") {
             navigate("Shifts");
+          } else if (loggedInUser?.UserType == "9") {
+            navigate("BookingList");
           } else {
             navigate("NewBooking");
           }
@@ -70,7 +84,7 @@ function LoginPage() {
       {/* <Navbar bg="light" expand="lg">
         <Navbar.Brand href="#">
           <img
-            src="https://www.casinoprideofficial.com/assets/images/logo.png"
+            src="/assets/images/logo.png"
             alt="Logo"
             className="d-inline-block align-top"
             style={{ marginRight: "10px", height: "30px" }} // Adjust the height as needed

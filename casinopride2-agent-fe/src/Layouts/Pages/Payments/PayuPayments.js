@@ -9,12 +9,10 @@ const PayuPayments = ({
   Email,
   Phone,
   AmountAfterDiscount,
-  BookingDetails
 }) => {
   const uniqueId = uuidv4();
   const formRef = useRef(null);
 
-  const BookingId = BookingDetails?.Id;
   const finalAmount =
     AmountAfterDiscount == 0 ? ActualAmount : AmountAfterDiscount;
 
@@ -27,7 +25,7 @@ const PayuPayments = ({
       "|" +
       finalAmount +
       "|" +
-      BookingId +
+      "iphone" +
       "|" +
       FullName +
       "|" +
@@ -73,7 +71,7 @@ const PayuPayments = ({
     // Set all required parameters in the form
     formRef.current.querySelector('input[name="key"]').value = process.env.REACT_APP_PAYU_MERCHANT_KEY;
     formRef.current.querySelector('input[name="txnid"]').value = uniqueId;
-    formRef.current.querySelector('input[name="productinfo"]').value = BookingId;
+    formRef.current.querySelector('input[name="productinfo"]').value = "iphone";
     formRef.current.querySelector('input[name="amount"]').value = finalAmount;
     formRef.current.querySelector('input[name="email"]').value = Email;
     formRef.current.querySelector('input[name="firstname"]').value = FullName;
@@ -81,7 +79,7 @@ const PayuPayments = ({
     formRef.current.querySelector('input[name="surl"]').value = urlWithHeaders;
 
     formRef.current.querySelector('input[name="furl"]').value =
-      `${process.env.REACT_APP_BILLING_URL_HTTPS}/api/billing/addPaymentsAgentPanel`;
+      "http://localhost:3000/PaymentFailure";
 
     formRef.current.querySelector('input[name="hash"]').value = generatedHash;
 

@@ -18,9 +18,7 @@ const GenerateBill = () => {
 
   const { userType } = location.state;
   const { userData } = location.state;
-  const BookingDetails = useSelector(
-    (state) => state.booking?.userDetailsAfterBooking
-  );
+
   const loginDetails = useSelector(
     (state) => state.auth?.userDetailsAfterLogin.Details
   );
@@ -129,7 +127,6 @@ const GenerateBill = () => {
         FullName={userData?.FullName}
         Email={userData?.Email}
         Phone={userData?.Phone}
-        BookingDetails={BookingDetails}
       />
     </div>
   );

@@ -46,6 +46,7 @@ const GenerateBill = () => {
       bookingId: userData?.Id,
       packageId: userData?.PackageId,
       packageGuestCount: userData?.PackageGuestCount,
+      packageDiscounts: userData?.PackageDiscounts,
       totalGuestCount: userData?.TotalGuestCount,
       bookingDate: bookingdate,
       billingDate: today,

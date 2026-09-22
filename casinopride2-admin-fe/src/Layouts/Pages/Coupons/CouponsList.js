@@ -35,8 +35,22 @@ const CouponsList = () => {
   const handleClose = () => setShowModal(false);
   const handleShow = (Id) => {
     setShowModal(true);
-    console.log("id to be deleted", Id);
     setUserId(Id);
+  };
+
+  const handleDelete = () => {
+    dispatch(
+      deleteCoupon(loginDetails?.logindata?.Token, userId, (callback) => {
+        if (callback.status) {
+          toast.success("Coupon deleted successfully");
+          handleClose();
+          fetchCouponDetails();
+        } else {
+          toast.error(callback.error || "Failed to delete coupon");
+          handleClose();
+        }
+      })
+    );
   };
 
   const fetchCouponDetails = () => {
@@ -183,7 +197,9 @@ const CouponsList = () => {
             <th scope="col" className="text-center table_heading">
               Edit
             </th>
-
+            <th scope="col" className="text-center table_heading">
+              Delete
+            </th>
             <th scope="col" className="text-center table_heading">
               View more
             </th>
@@ -253,41 +269,39 @@ const CouponsList = () => {
                   </Link>
                 </td>
 
+                <td className="manager-list text-center">
+                  <AiFillDelete
+                    style={{ color: "#f06a6b", fontSize: "20px", cursor: "pointer" }}
+                    onClick={() => handleShow(item.Id)}
+                  />
+                </td>
+
                 <td
                   className="manager-list"
                   onClick={() => handleViewMore(item)}
                 >
                   <img src={more} className="more_img" />
                 </td>
-
-                {/* <td className="manager-list">
-                  <div className="row">
-                    <div className="col-lg-4">
-                      <Link
-                        to="/AddPackage"
-                        state={{ userData: item }}
-                        className="links"
-                      >
-                        <AiFillEdit />
-                      </Link>
-                    </div>
-                    <div className="col-lg-4">
-                      <AiFillDelete onClick={() => handleShow(item.Id)} />
-                    </div>
-                    <div
-                      className="col-lg-4"
-                      onClick={() => handleViewMore(item)}
-                    >
-                      View more
-                    </div>
-                  </div>
-                </td> */}
               </tr>
             ))
           )}
         </tbody>
       </table>
       <ToastContainer />
+
+      {/* Delete Confirmation Modal */}
+      <Modal show={showModal} onHide={handleClose} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Delete Coupon</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          Are you sure you want to delete this coupon? This action cannot be undone.
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={handleClose}>Cancel</Button>
+          <Button variant="danger" onClick={handleDelete}>Delete</Button>
+        </Modal.Footer>
+      </Modal>
 
       <Modal show={showViewMoreModal} onHide={handleCloseViewMore}>
         <Modal.Header closeButton>

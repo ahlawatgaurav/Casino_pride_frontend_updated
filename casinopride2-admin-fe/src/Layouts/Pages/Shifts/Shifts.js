@@ -46,13 +46,13 @@ const Shifts = () => {
   const outletOpenDetails = useSelector((state) => state.auth?.outeltDetails);
 
   const today = moment().format("YYYY-MM-DD");
+  const [activeOutletDate, setActiveOutletDate] = useState();
+  const currentShiftDate = activeOutletDate ? moment(activeOutletDate).format("YYYY-MM-DD") : (activeDateOfOutlet?.OutletDate ? moment(activeDateOfOutlet.OutletDate).format("YYYY-MM-DD") : today);
 
   const [loader, setLoader] = useState(true);
 
-  const formattedDate = moment().format("YYYY-MM-DD");
-
-  const parsedDate = moment(activeDateOfOutlet?.OutletDate);
-  const outletFormattedData = parsedDate?.format("YYYY-MM-DD");
+  const formattedDate = currentShiftDate;
+  const outletFormattedData = currentShiftDate;
 
   const [outletOpen, setOutletOpen] = useState(false);
   //from api integration ---------------->
@@ -121,13 +121,14 @@ const Shifts = () => {
       checkActiveOutlet(loginDetails?.logindata?.Token, (callback) => {
         if (callback.status) {
           console.log("check active outlet--->", callback?.response?.Details);
+          setActiveOutletDate(callback?.response?.Details?.OutletDate);
           setOutletId(callback?.response?.Details?.Id);
           if (callback?.response?.Details == null) {
             setCheckActiveOutlet(false);
             setLoader(false);
           } else {
             setCheckActiveOutlet(
-              callback?.response?.Details?.OutletDate == today ? true : false
+              callback?.response?.Details?.OutletStatus == 1 ? true : false
             );
             setOutletId(callback?.response?.Details?.Id);
           }
@@ -139,7 +140,7 @@ const Shifts = () => {
 
     dispatch(
       checkShiftForUser(
-        checkActiveOtlet == true ? today : activeDateOfOutlet?.OutletDate,
+        currentShiftDate,
         validateDetails?.Details?.Id,
         validateDetails?.Details?.UserType,
         loginDetails?.logindata?.Token,
@@ -156,7 +157,7 @@ const Shifts = () => {
             ) {
               dispatch(
                 recentShiftForOutlet(
-                  !checkActiveOtlet ? activeDateOfOutlet?.OutletDate : today,
+                  currentShiftDate,
                   loginDetails?.logindata?.Token,
                   (callback) => {
                     if (callback) {
@@ -175,7 +176,7 @@ const Shifts = () => {
                           "Else condition for recent shift open",
                           callback?.response?.Details
                         );
-                        setRecentShiftOpen(callback?.response?.Details);
+                        setSHiftDetaislForUser(callback?.response?.Details); setRecentShiftOpen([]);
 
                         setLoader(false);
                       }
@@ -205,7 +206,7 @@ const Shifts = () => {
 
     dispatch(
       checkCurrentOutletFn(
-        !checkActiveOtlet ? activeDateOfOutlet?.OutletDate : today,
+        currentShiftDate,
         loginDetails?.logindata?.Token,
         (callback) => {
           if (callback.status) {
@@ -213,6 +214,7 @@ const Shifts = () => {
               "check current outlet called---******************************************8---------->",
               callback?.response?.Details[0]?.OutletStatus
             );
+            setOutletId(callback?.response?.Details[0]?.Id);
             setOutletDetails(callback?.response?.Details[0]?.OutletStatus);
             dispatch(saveOutletDetails(callback?.response));
           } else {
@@ -222,14 +224,14 @@ const Shifts = () => {
       )
     );
 
-  }, [checkActiveOtlet]);
+  }, [checkActiveOtlet, activeOutletDate]);
 
 
 
   const openShiftOne = () => {
     console.log("Shift one open");
     const data = {
-      outletDate: activeDateOfOutlet?.OutletDate,
+      outletDate: currentShiftDate,
       shiftTypeId: 1,
       userType: validateDetails?.Details?.UserType,
       userId: validateDetails?.Details?.Id,
@@ -248,7 +250,7 @@ const Shifts = () => {
 
           dispatch(
             checkShiftForUser(
-              checkActiveOtlet == true ? today : activeDateOfOutlet?.OutletDate,
+              currentShiftDate,
               validateDetails?.Details?.Id,
               validateDetails?.Details?.UserType,
               loginDetails?.logindata?.Token,
@@ -264,9 +266,7 @@ const Shifts = () => {
                   ) {
                     dispatch(
                       recentShiftForOutlet(
-                        !checkActiveOtlet
-                          ? activeDateOfOutlet?.OutletDate
-                          : today,
+                        currentShiftDate,
                         loginDetails?.logindata?.Token,
                         (callback) => {
                           if (callback) {
@@ -287,7 +287,7 @@ const Shifts = () => {
                                 "Else condition for recent shift open",
                                 callback?.response?.Details
                               );
-                              setRecentShiftOpen(callback?.response?.Details);
+                              setSHiftDetaislForUser(callback?.response?.Details); setRecentShiftOpen([]);
                               window.location.reload();
 
                               setLoader(false);
@@ -350,7 +350,7 @@ const Shifts = () => {
           toast.success("Shift 1 is Closed");
           dispatch(
             checkShiftForUser(
-              checkActiveOtlet == true ? today : activeDateOfOutlet?.OutletDate,
+              currentShiftDate,
               validateDetails?.Details?.Id,
               validateDetails?.Details?.UserType,
               loginDetails?.logindata?.Token,
@@ -366,9 +366,7 @@ const Shifts = () => {
                   ) {
                     dispatch(
                       recentShiftForOutlet(
-                        !checkActiveOtlet
-                          ? activeDateOfOutlet?.OutletDate
-                          : today,
+                        currentShiftDate,
                         loginDetails?.logindata?.Token,
                         (callback) => {
                           if (callback) {
@@ -390,7 +388,7 @@ const Shifts = () => {
                                 "Else condition for recent shift open",
                                 callback?.response?.Details
                               );
-                              setRecentShiftOpen(callback?.response?.Details);
+                              setSHiftDetaislForUser(callback?.response?.Details); setRecentShiftOpen([]);
                               // window.location.reload();
                               setShowShiftReportModal(true);
 
@@ -433,7 +431,7 @@ const Shifts = () => {
   const openShiftTwo = () => {
     console.log("Called open shift 2");
     const data = {
-      outletDate: activeDateOfOutlet?.OutletDate,
+      outletDate: currentShiftDate,
       shiftTypeId: 2,
       userType: validateDetails?.Details?.UserType,
       userId: validateDetails?.Details?.Id,
@@ -451,7 +449,7 @@ const Shifts = () => {
 
           dispatch(
             checkShiftForUser(
-              checkActiveOtlet == true ? today : activeDateOfOutlet?.OutletDate,
+              currentShiftDate,
               validateDetails?.Details?.Id,
               validateDetails?.Details?.UserType,
               loginDetails?.logindata?.Token,
@@ -467,9 +465,7 @@ const Shifts = () => {
                   ) {
                     dispatch(
                       recentShiftForOutlet(
-                        !checkActiveOtlet
-                          ? activeDateOfOutlet?.OutletDate
-                          : today,
+                        currentShiftDate,
                         loginDetails?.logindata?.Token,
                         (callback) => {
                           if (callback) {
@@ -490,7 +486,7 @@ const Shifts = () => {
                                 "Else condition for recent shift open",
                                 callback?.response?.Details
                               );
-                              setRecentShiftOpen(callback?.response?.Details);
+                              setSHiftDetaislForUser(callback?.response?.Details); setRecentShiftOpen([]);
                               window.location.reload();
 
                               setLoader(false);
@@ -553,7 +549,7 @@ const Shifts = () => {
 
           dispatch(
             checkShiftForUser(
-              checkActiveOtlet == true ? today : activeDateOfOutlet?.OutletDate,
+              currentShiftDate,
               validateDetails?.Details?.Id,
               validateDetails?.Details?.UserType,
               loginDetails?.logindata?.Token,
@@ -569,9 +565,7 @@ const Shifts = () => {
                   ) {
                     dispatch(
                       recentShiftForOutlet(
-                        !checkActiveOtlet
-                          ? activeDateOfOutlet?.OutletDate
-                          : today,
+                        currentShiftDate,
                         loginDetails?.logindata?.Token,
                         (callback) => {
                           if (callback) {
@@ -593,7 +587,7 @@ const Shifts = () => {
                                 "Else condition for recent shift open",
                                 callback?.response?.Details
                               );
-                              setRecentShiftOpen(callback?.response?.Details);
+                              setSHiftDetaislForUser(callback?.response?.Details); setRecentShiftOpen([]);
                               // window.location.reload();
                               setShowShiftReportModal(true);
 
@@ -638,7 +632,7 @@ const Shifts = () => {
 
   const openSHiftThree = () => {
     const data = {
-      outletDate: activeDateOfOutlet?.OutletDate,
+      outletDate: currentShiftDate,
       shiftTypeId: 3,
       userType: validateDetails?.Details?.UserType,
       userId: validateDetails?.Details?.Id,
@@ -657,7 +651,7 @@ const Shifts = () => {
 
           dispatch(
             checkShiftForUser(
-              checkActiveOtlet == true ? today : activeDateOfOutlet?.OutletDate,
+              currentShiftDate,
               validateDetails?.Details?.Id,
               validateDetails?.Details?.UserType,
               loginDetails?.logindata?.Token,
@@ -673,9 +667,7 @@ const Shifts = () => {
                   ) {
                     dispatch(
                       recentShiftForOutlet(
-                        !checkActiveOtlet
-                          ? activeDateOfOutlet?.OutletDate
-                          : today,
+                        currentShiftDate,
                         loginDetails?.logindata?.Token,
                         (callback) => {
                           if (callback) {
@@ -696,7 +688,7 @@ const Shifts = () => {
                                 "Else condition for recent shift open",
                                 callback?.response?.Details
                               );
-                              setRecentShiftOpen(callback?.response?.Details);
+                              setSHiftDetaislForUser(callback?.response?.Details); setRecentShiftOpen([]);
                               window.location.reload();
 
                               setLoader(false);
@@ -751,7 +743,7 @@ const Shifts = () => {
 
           dispatch(
             checkShiftForUser(
-              checkActiveOtlet == true ? today : activeDateOfOutlet?.OutletDate,
+              currentShiftDate,
               validateDetails?.Details?.Id,
               validateDetails?.Details?.UserType,
               loginDetails?.logindata?.Token,
@@ -767,9 +759,7 @@ const Shifts = () => {
                   ) {
                     dispatch(
                       recentShiftForOutlet(
-                        !checkActiveOtlet
-                          ? activeDateOfOutlet?.OutletDate
-                          : today,
+                        currentShiftDate,
                         loginDetails?.logindata?.Token,
                         (callback) => {
                           if (callback) {
@@ -791,7 +781,7 @@ const Shifts = () => {
                                 "Else condition for recent shift open",
                                 callback?.response?.Details
                               );
-                              setRecentShiftOpen(callback?.response?.Details);
+                              setSHiftDetaislForUser(callback?.response?.Details); setRecentShiftOpen([]);
                               // window.location.reload();
                               setShowShiftReportModal(true);
 
@@ -904,7 +894,7 @@ const Shifts = () => {
 
           dispatch(
             checkShiftForUser(
-              checkActiveOtlet == true ? today : activeDateOfOutlet?.OutletDate,
+              currentShiftDate,
               validateDetails?.Details?.Id,
               validateDetails?.Details?.UserType,
               loginDetails?.logindata?.Token,
@@ -920,9 +910,7 @@ const Shifts = () => {
                   ) {
                     dispatch(
                       recentShiftForOutlet(
-                        !checkActiveOtlet
-                          ? activeDateOfOutlet?.OutletDate
-                          : today,
+                        currentShiftDate,
                         loginDetails?.logindata?.Token,
                         (callback) => {
                           if (callback) {
@@ -943,7 +931,7 @@ const Shifts = () => {
                                 "Else condition for recent shift open",
                                 callback?.response?.Details
                               );
-                              setRecentShiftOpen(callback?.response?.Details);
+                              setSHiftDetaislForUser(callback?.response?.Details); setRecentShiftOpen([]);
                               window.location.reload();
 
                               setLoader(false);
@@ -998,7 +986,7 @@ const Shifts = () => {
 
           dispatch(
             checkShiftForUser(
-              checkActiveOtlet == true ? today : activeDateOfOutlet?.OutletDate,
+              currentShiftDate,
               validateDetails?.Details?.Id,
               validateDetails?.Details?.UserType,
               loginDetails?.logindata?.Token,
@@ -1014,9 +1002,7 @@ const Shifts = () => {
                   ) {
                     dispatch(
                       recentShiftForOutlet(
-                        !checkActiveOtlet
-                          ? activeDateOfOutlet?.OutletDate
-                          : today,
+                        currentShiftDate,
                         loginDetails?.logindata?.Token,
                         (callback) => {
                           if (callback) {
@@ -1037,7 +1023,7 @@ const Shifts = () => {
                                 "Else condition for recent shift open",
                                 callback?.response?.Details
                               );
-                              setRecentShiftOpen(callback?.response?.Details);
+                              setSHiftDetaislForUser(callback?.response?.Details); setRecentShiftOpen([]);
                               window.location.reload();
 
                               setLoader(false);
@@ -1092,7 +1078,7 @@ const Shifts = () => {
 
           dispatch(
             checkShiftForUser(
-              checkActiveOtlet == true ? today : activeDateOfOutlet?.OutletDate,
+              currentShiftDate,
               validateDetails?.Details?.Id,
               validateDetails?.Details?.UserType,
               loginDetails?.logindata?.Token,
@@ -1108,9 +1094,7 @@ const Shifts = () => {
                   ) {
                     dispatch(
                       recentShiftForOutlet(
-                        !checkActiveOtlet
-                          ? activeDateOfOutlet?.OutletDate
-                          : today,
+                        currentShiftDate,
                         loginDetails?.logindata?.Token,
                         (callback) => {
                           if (callback) {
@@ -1131,7 +1115,7 @@ const Shifts = () => {
                                 "Else condition for recent shift open",
                                 callback?.response?.Details
                               );
-                              setRecentShiftOpen(callback?.response?.Details);
+                              setSHiftDetaislForUser(callback?.response?.Details); setRecentShiftOpen([]);
                               window.location.reload();
 
                               setLoader(false);
@@ -2321,8 +2305,8 @@ const Shifts = () => {
   };
   return (
     console.log(
-      "activeDateOfOutlet?.OutletDate>>",
-      activeDateOfOutlet?.OutletDate
+      "currentShiftDate>>",
+      currentShiftDate
     ),
     console.log('return-->>recentShiftOpen>>', recentShiftOpen),
     console.log('return>>shiftDetailsForUser>>', shiftDetailsForUser),
@@ -2355,15 +2339,15 @@ const Shifts = () => {
           // style={{ backgroundColor: "green" }}
           >
             <h5 style={{ marginBottom: "8px" }}>Welcome, {validateDetails?.Details?.Name}</h5>
-            {(activeDateOfOutlet?.OutletDate != undefined ||
-              activeDateOfOutlet?.OutletDate != null) && (
+            {(currentShiftDate != undefined ||
+              currentShiftDate != null) && (
                 <div>
 
                   <h5 className="mb-0" style={{ paddingBottom: "20px" }}>
                     Outlet Date :{" "}
-                    {activeDateOfOutlet?.OutletDate != undefined ||
-                      activeDateOfOutlet?.OutletDate != null
-                      ? activeDateOfOutlet?.OutletDate
+                    {currentShiftDate != undefined ||
+                      currentShiftDate != null
+                      ? currentShiftDate
                       : ""}
                   </h5>
 

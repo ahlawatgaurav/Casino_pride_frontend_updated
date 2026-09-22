@@ -27,6 +27,7 @@ import booking from "../../../Redux/reducers/booking";
 import { compose } from "@reduxjs/toolkit";
 import { sendEmail } from "../../../Redux/actions/booking";
 import { getAcknowledgementLinkFn } from "../../../Redux/actions/booking";
+import api from "../../../Service/api";
 
 const SendAck = () => {
   const dispatch = useDispatch();
@@ -36,6 +37,7 @@ const SendAck = () => {
     (state) => state.booking?.userDetailsAfterBooking
   );
   const elementRef = useRef(null);
+  const smsSentRef = useRef(false);
 
   console.log(
     "BookingDetails-----------------|||||||||||||||---------------------->",
@@ -50,9 +52,7 @@ const SendAck = () => {
     (state) => state.auth?.userDetailsAfterValidation
   );
 
-  const AgentSettlemetDiscount =
-    validateDetails?.Details?.DiscountPercent -
-    BookingDetails?.AgentPanelDiscount;
+  const AgentSettlemetDiscount = 15 - ((Number(BookingDetails?.ActualAmount) > 0) ? ((Number(BookingDetails?.ActualAmount) - Number(BookingDetails?.AmountAfterDiscount)) / Number(BookingDetails?.ActualAmount)) * 100 : 0);
 
   console.log("AgentSettlemetDiscount-------->", AgentSettlemetDiscount);
 
@@ -63,7 +63,7 @@ const SendAck = () => {
   console.log("calculateAmountAfterDiscount", calculateAmountAfterDiscount);
 
   const AgentSettlementAmount =
-    (calculateAmountAfterDiscount * AgentSettlemetDiscount) / 100;
+    (calculateAmountAfterDiscount * Math.max(Number(AgentSettlemetDiscount) || 0, 0)) / 100;
 
   console.log("Agent settlement amount log--------->", AgentSettlementAmount);
 
@@ -254,7 +254,13 @@ const SendAck = () => {
     );
   };
 
-  const sendSmsFn = () => {
+  const sendSmsFn = (isAuto = false) => {
+    // Runs once per page: auto-triggered on load, or manually via Confirm.
+    if (smsSentRef.current) {
+      if (!isAuto) navigate("/NewBooking");
+      return;
+    }
+    smsSentRef.current = true;
     const url = new URL(window.location.href);
     const parameterString = url.searchParams.get("TransactionId");
 
@@ -347,26 +353,18 @@ const SendAck = () => {
                     // setShortUrl(callback?.response?.shortUrl);
                     setDisabledLoader(false);
 
-                    let shortUrl = callback?.response?.shortUrl;
-
-                    // setUpatedQrcodeImage(callback?.response?.shortUrl);
-                    const apiUrl2 = `https://commnestsms.com/api/push.json?apikey=635cd8e64fddd&route=transactional&sender=CPGOAA&mobileno=${BookingDetails?.Phone.replace("+91", "")}&text=Dear%20Sir,%0AGreetings%20from%20Casino%20Pride%0AWe%20would%20love%20to%20inform%20you%20that%20we%20have%20received%20your%20booking%20for%20${shortUrl}.%20Kindly%20follow%20the%20link%20and%20show%20the%20QR%20code%20to%20the%20Front%20Office%20at%20the%20time%20of%20your%20arrival%20for%20hassle%20free%20entry.%0APlease%20make%20sure%20that%20people%20are%20above%2021%20years%20of%20age%20and%20are%20following%20the%20dress%20code%20that%20is%20smart%20casuals%20or%20formals.%20For%20men%20slippers,%20shorts,%20cut%20sleeves%20and%20caps%20are%20not%20allowed.%0APlease%20note%20that%20the%20booking%20amount%20is%20not%20refundable%20or%20transferable.%0AWe%20would%20love%20to%20have%20you%20onboard%20Casino%20Pride.%0ALet%27s%20play%20with%20PRIDE%20!!%0AThanks%20%26%20Regards%0A24x7%20helpline%20-%209158885000%0ATeam%20Casino%20Pride%20-%20CPGOAA`
-
-                    fetch(apiUrl2)
-                      .then((response) => {
-                        if (!response.ok) {
-                          throw new Error(
-                            `HTTP error! Status: ${response.status}`
-                          );
-                        }
-                        return response.json();
-                      })
-                      .then((data) => {
-                        console.log(data);
+                    // const apiUrl = `http://commnestsms.com/api/push.json?apikey=635cd8e64fddd&route=transactional&sender=CPGOAA&mobileno=${BookingDetails?.Phone}&text=Dear%20Sir,%0AGreetings%20from%20Casino%20Pride%0AWe%20would%20love%20to%20inform%20you%20that%20we%20have%20received%20your%20booking%20for%20200%20Kindly%20follow%20the%20link%20and%20show%20the%20QR%20code%20to%20the%20Front%20Office%20at%20the%20time%20of%20your%20arrival%20for%20hassle%20free%20entry.%0APlease%20make%20sure%20that%20people%20are%20above%2021%20years%20of%20age%20and%20are%20following%20the%20dress%20code%20that%20is%20smart%20casuals%20or%20formals.%20For%20men%20slippers,%20shorts,%20cut%20sleeves%20and%20caps%20are%20not%20allowed.%0APlease%20note%20that%20the%20booking%20amount%20is%20not%20refundable%20or%20transferable.%0AWe%20would%20love%20to%20have%20you%20onboard%20Casino%20Pride.%20%0ADo%20let%20us%20know%20your%20valuable%20feedback%20at%20feedback@casinoprideofficial.com%0ALet%27s%20play%20with%20PRIDE%20!!%0AThanks%20%26%20Regards%0A24x7%20helpline%20-%20%2B91%2091%205888%205000%0ATeam%20Casino%20Pride%20-%20CPGOAA`;
+                    const apiUrl2 = `http://commnestsms.com/api/push.json?apikey=635cd8e64fddd&route=transactional&sender=CPGOAA&mobileno=${BookingDetails?.Phone}&text=Dear%20Sir,%0AGreetings%20from%20Casino%20Pride%0AWe%20would%20love%20to%20inform%20you%20that%20we%20have%20received%20your%20booking%20for%20${callback?.response?.shortUrl}%20Kindly%20follow%20the%20link%20and%20show%20the%20QR%20code%20to%20the%20Front%20Office%20at%20the%20time%20of%20your%20arrival%20for%20hassle%20free%20entry.%0APlease%20make%20sure%20that%20people%20are%20above%2021%20years%20of%20age%20and%20are%20following%20the%20dress%20code%20that%20is%20smart%20casuals%20or%20formals.%20For%20men%20slippers,%20shorts,%20cut%20sleeves%20and%20caps%20are%20not%20allowed.%0APlease%20note%20that%20the%20booking%20amount%20is%20not%20refundable%20or%20transferable.%0AWe%20would%20love%20to%20have%20you%20onboard%20Casino%20Pride.%20%0ADo%20let%20us%20know%20your%20valuable%20feedback%20at%20feedback@casinoprideofficial.com%0ALet%27s%20play%20with%20PRIDE%20!!%0AThanks%20%26%20Regards%0A24x7%20helpline%20-%20%2B91%2091%205888%205000%0ATeam%20Casino%20Pride%20-%20CPGOAA`;
+                    api.BOOKING_PORT.post("/booking/sendSMS", {
+                      phone: BookingDetails?.Phone,
+                      shortUrl: callback?.response?.shortUrl,
+                    })
+                      .then((res) => {
+                        console.log("SMS sent:", res?.data);
                         toast.success("Details sent to customer");
                       })
                       .catch((error) => {
-                        console.error("Fetch error:", error.message);
+                        console.error("SMS error:", error?.message);
                       });
 
                     const data = {
@@ -385,7 +383,7 @@ const SendAck = () => {
                         if (callback.status) {
                           toast.success("Email sent");
 
-                          navigate("/NewBooking");
+                          if (!isAuto) navigate("/NewBooking");
 
                           setLoader(false);
 
@@ -444,6 +442,20 @@ const SendAck = () => {
     setLoader(true);
   }, []);
 
+  // Auto-send the booking confirmation SMS — no need to press Confirm.
+  // Small delay so the QR/acknowledgement DOM is fully rendered before capture.
+  useEffect(() => {
+    if (smsSentRef.current) return;
+    if (!BookingDetails?.Id) return;
+    const t = setTimeout(() => {
+      if (!smsSentRef.current && elementRef.current) {
+        sendSmsFn(true);
+      }
+    }, 2500);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [BookingDetails]);
+
   useEffect(() => {
     QRCode.toCanvas(
       document.createElement("canvas"),
@@ -491,8 +503,8 @@ const SendAck = () => {
             A unit of Goa Coastal Resorts & Recreation Pvt.Ltd
           </p>
           <h5 className="thermalBill-font-large">
-            H.No. 838/1(3), 2nd floor Edificio Da Silva E Menezes Near Holy
-            Family church Porvorim Goa 403521 <br></br>Tel. + 91 9158885000
+          H.No. 838/1(3), 2nd floor Edificio Da Silva E Menezes Near Holy Family church Porvorim Goa 403521{" "}
+            <br></br>Tel. + 91 9158885000
           </h5>
           <h5 className="thermalBill-font-large">
             Email : info@casinoprideofficial.com
@@ -510,7 +522,7 @@ const SendAck = () => {
           <h5 className="thermalBill-font-small">GSTIN : 30AACCG7450R1ZC</h5>
           <h5 className="thermalBill-font-small">TIN No : 30220106332</h5>
 
-          <div className="row" style={{ justifyContent: "space-between" }}>
+          <div className="row" style={{justifyContent:'space-between'}}>
             <div className="col-3 bill-details">
               <p className="BillPrintFont">
                 Gusest Name :
@@ -546,7 +558,7 @@ const SendAck = () => {
               <p className="BillPrintFont">
                 Total Number of Guests :{" "}
                 <span className="BillPrintFont">
-                  {BookingDetails.TotalGuestCount}
+                  {BookingDetails.TotalGuestCount - (BookingDetails.NumOfTeens || 0)}
                 </span>
               </p>
 
@@ -613,7 +625,7 @@ const SendAck = () => {
           type="submit"
           className="btn btn-primary mt-5 btn-lg"
           // onClick={onButtonClick}
-          onClick={sendSmsFn}
+          onClick={() => sendSmsFn(false)}
           disabled={disabledLoader}
         >
           {!loader ? (

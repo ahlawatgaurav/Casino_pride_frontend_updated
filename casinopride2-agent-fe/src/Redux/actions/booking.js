@@ -18,6 +18,12 @@ export const AddUserDetails = (data, token, callback) => async (dispatch) => {
     .catch((err) => {
       {
         console.log("error", err);
+        callback({
+          status: false,
+          error:
+            err?.response?.data?.Error?.ErrorMessage ||
+            "Failed to create booking",
+        });
       }
     });
 };
@@ -37,18 +43,30 @@ export const EditUserDetails = (data, token, callback) => async (dispatch) => {
       }
     })
     .catch((err) => {
-      {
-        console.log("error", err);
-      }
+      console.log("error", err);
+      callback({
+        status: false,
+        error:
+          err?.response?.data?.Error?.ErrorMessage ||
+          "Failed to create booking",
+      });
     });
 };
 
 export const getPackagesDetails =
-  (token, usertype, callback) => async (dispatch) => {
+  (token, usertype, categoryId, callback) => async (dispatch) => {
     console.log(token);
     console.log(usertype);
 
-    api.BOOKING_PORT.get("/booking/displayPackages", {
+    const params = new URLSearchParams();
+    if (categoryId) {
+      params.set("categoryId", Number(categoryId));
+    }
+    params.set("visibilityTarget", "agent");
+
+    const url = `/booking/displayPackages?${params.toString()}`;
+
+    api.BOOKING_PORT.get(url, {
       headers: { AuthToken: token },
     })
       .then((response) => {
@@ -67,7 +85,9 @@ export const getPackagesDetails =
         }
       })
       .catch((err) => {
-        console.log("error", err);
+        {
+          console.log("error", err);
+        }
       });
   };
 
@@ -90,24 +110,13 @@ export const AddBookingFn = (token, data, callback) => async (dispatch) => {
     })
     .catch((err) => {
       console.log("error", err);
-    });
-};
-
-export const SendPaymentLinkToCustomer = (token, data, callback) => async (dispatch) => {
-  api.BOOKING_PORT.post("/booking/SendPaymentLinkToCustomer", data, {headers: { AuthToken: token },})
-  .then((response) => {
-    if (response.data?.Details) {
-      console.log(response.data?.Details);
       callback({
-        status: true,
-        response: response?.data,
+        status: false,
+        error:
+          err?.response?.data?.Error?.ErrorMessage ||
+          "Failed to create booking",
       });
-    } 
-  })
-  .catch((err) => {
-      console.log("error", err);
-    
-  });
+    });
 };
 
 export const SendBookingConfirmMail = (data) => async (dispatch) => {

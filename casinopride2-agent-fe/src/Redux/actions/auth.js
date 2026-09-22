@@ -18,64 +18,61 @@ export const Login = (data, callback) => async (dispatch) => {
       if (response.data?.Details) {
         dispatch(saveValidateData(response.data));
 
-        // if (
-        //   response.data?.Details?.UserType == 2 ||
-        //   response.data?.Details?.UserType == 3
-        // ) {
-        //   api.AUTH_PORT.get("/auth/checkIP")
-        //     .then((response) => {
-        //       if (
-        //         response.data?.Details &&
-        //         response.data?.Details?.result === "IPs do not match"
-        //       ) {
-        //         toast.error("IPS do not match");
-        //       } else {
-        //         api.AUTH_PORT.post("/auth/login", {
-        //           UserId: response.data?.Details?.Id,
-        //           UserType: response.data?.Details?.UserType,
-        //         })
-        //           .then((response) => {
-        //             console.log("Login data -->", response.data);
-        //             dispatch(saveLoginData(response.data));
-        //             callback({
-        //               status: true,
-        //               response: response?.data,
-        //             });
-        //             if (response?.data) {
-        //               console.log("Reached Hereeeee");
+        if (
+          response.data?.Details?.UserType == 2 ||
+          response.data?.Details?.UserType == 3
+        ) {
+          api.AUTH_PORT.get("/auth/checkIP")
+            .then((response) => {
+              if (
+                response.data?.Details &&
+                response.data?.Details?.result === "IPs do not match"
+              ) {
+                toast.error("IPS do not match");
+              } else {
+                api.AUTH_PORT.post("/auth/login", {
+                  UserId: response.data?.Details?.Id,
+                  UserType: response.data?.Details?.UserType,
+                })
+                  .then((response) => {
+                    console.log("Login data -->", response.data);
+                    dispatch(saveLoginData(response.data));
+                    callback({
+                      status: true,
+                      response: response?.data,
+                    });
+                    if (response?.data) {
+                      console.log("Reached Hereeeee");
 
-        //               api.CORE_PORT.get(
-        //                 `/core/checkCurrentOutlet?outletDate=${today}`,
-        //                 {
-        //                   headers: {
-        //                     AuthToken:
-        //                       response?.data?.Details?.logindata?.Token,
-        //                   },
-        //                 }
-        //               ).then((response) => {
-        //                 console.log(
-        //                   "checkCurrentOutlet-------------------------------------------------->>>>>> -->",
-        //                   response.data
-        //                 );
-        //                 dispatch(saveOutletDetails(response.data));
-        //               });
-        //             }
-        //           })
-        //           .catch((err) => {
-        //             {
-        //               console.log("error", err);
-        //             }
-        //           });
-        //       }
-        //     })
-        //     .catch((err) => {
-        //       {
-        //         console.log("error", err);
-        //       }
-        //     });
-        // }
-        if (response.data?.Details?.UserType != 5){
-          callback({ status: false, error: "Not allowed to login"});
+                      api.CORE_PORT.get(
+                        `/core/checkCurrentOutlet?outletDate=${today}`,
+                        {
+                          headers: {
+                            AuthToken:
+                              response?.data?.Details?.logindata?.Token,
+                          },
+                        }
+                      ).then((response) => {
+                        console.log(
+                          "checkCurrentOutlet-------------------------------------------------->>>>>> -->",
+                          response.data
+                        );
+                        dispatch(saveOutletDetails(response.data));
+                      });
+                    }
+                  })
+                  .catch((err) => {
+                    {
+                      console.log("error", err);
+                    }
+                  });
+              }
+            })
+            .catch((err) => {
+              {
+                console.log("error", err);
+              }
+            });
         } else {
           api.AUTH_PORT.post("/auth/login", {
             UserId: response.data?.Details?.Id,

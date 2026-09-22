@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from "react";
 import "../../../assets/ManagerList.css";
 import { Link } from "react-router-dom";
-import { getPackageDetails, deletePackage } from "../../../Redux/actions/users";
+import {
+  getPackageDetails,
+  deletePackage,
+  getAllCategories,
+} from "../../../Redux/actions/users";
 import { fetchUserbookings } from "../../../Redux/actions/booking";
 import { useDispatch } from "react-redux";
 import {
@@ -25,6 +29,7 @@ import { voidBill } from "../../../Redux/actions/billing";
 import { updateBillForVoid } from "../../../Redux/actions/billing";
 import { generateCSVReport } from "../../../Redux/actions/billing";
 import { generateNoShowReport } from "../../../Redux/actions/billing";
+import { generateDetailedReportExcel } from "../../../Redux/actions/billing";
 import { useNavigate } from "react-router-dom";
 import printerpng from "../../../assets/Images/printerpng.png";
 import { AiOutlinePrinter } from "react-icons/ai";
@@ -51,14 +56,14 @@ const BillingList = () => {
   );
 
   console.log("activeDateOfOutlet---------->", activeDateOfOutlet);
-
+  // const [filteredData, setFilteredData] = useState([]);
+  // const[methodOfPayment , setMethodofPayment] = useState(null);
   const [userBookings, setUserBookings] = useState([]);
   const [billingDetails, setBillingDetails] = useState([]);
   const [userName, setUserName] = useState([]);
   const [searchQuery, setSearchQuery] = useState(0);
   const [searchBillId, setSearhBillId] = useState("");
   const [loading, setLoading] = useState(true);
-  const [reportloading, setReportLoading] = useState(false);
 
   const [disableInput, setDisableInput] = useState(false);
 
@@ -70,7 +75,6 @@ const BillingList = () => {
   const todayDate = moment().format("YYYY-MM-DD");
 
   const [futureDate, setFutureDate] = useState("");
-
   // const [futureDate, setFutureDate] = useState("");
 
   console.log(
@@ -106,6 +110,12 @@ const BillingList = () => {
     : moment().format("YYYY-MM-DD"));
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [categoryOptions, setCategoryOptions] = useState([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState(0);
+  const [reportSummary, setReportSummary] = useState({
+    allCount: 0,
+    selectedCategoryCount: 0,
+  });
 
   const handleChangeLimit = (dataKey) => {
     setPage(1);
@@ -113,7 +123,6 @@ const BillingList = () => {
     setLimit(dataKey);
   };
   const fetchBillingDetailsFn = () => {
-    setLoading(true);
     console.log(
       "activeDateOfOutlet?.OutletDate>>",
       activeDateOfOutlet?.OutletDate
@@ -133,7 +142,6 @@ const BillingList = () => {
         fromDate,
         toDate,
         reportId == 4 ? 1 : 0,
-
         (callback) => {
           if (callback.status) {
             setLoading(false);
@@ -151,6 +159,61 @@ const BillingList = () => {
       )
     );
   };
+  // const fetchBillingDetailsFn = () => {
+  //   console.log(
+  //     "activeDateOfOutlet?.OutletDate>>",
+  //     activeDateOfOutlet?.OutletDate
+  //   );
+  //   console.log("billdateeee", billDate);
+  //   console.log("online>>", online);
+  //   console.log("futureDate>>>", futureDate);
+  //   console.log("methodOfPayment>>> tetete", methodOfPayment); // Log the selected payment method
+  
+  //   dispatch(
+  //     GetBillingDetails(
+  //       loginDetails?.logindata?.Token,
+  //       billDate,
+  //       futureDate,
+  //       userId,
+  //       shiftId,
+  //       billId,
+  //       searchBillId,
+  //       fromDate,
+  //       toDate,
+  //       reportId == 4 ? 1 : 0,
+  //       methodOfPayment, // Add methodOfPayment as a parameter
+  //       (callback) => {
+  //         if (callback.status) {
+  //           setLoading(false);
+  //           console.log(
+  //             "Callback---------get billings",
+  //             callback?.response?.Details
+  //           );
+  //           setBillingDetails(callback?.response?.Details);
+  //           setFilteredBillingList(callback?.response?.Details);
+  //         } else {
+  //           console.log("Callback---------get billings--error", callback.error);
+  //           toast.error(callback.error);
+  //         }
+  //       }
+  //     )
+  //   );
+  // };
+  // useEffect(() => {
+  //   if (methodOfPayment) {
+  //     const filtered = billingDetails.filter(
+  //       (item) => item.PaymentMethod === methodOfPayment
+  //     );
+  //     setFilteredBillingList(filtered);
+  //   } else {
+  //     setFilteredBillingList(billingDetails);
+  //   }
+  // }, [methodOfPayment, billingDetails]);
+  // useEffect(() => {
+  //   if (methodOfPayment !== undefined || null) {
+  //     fetchBillingDetailsFn();
+  //   }
+  // }, [methodOfPayment]); // Re-run when methodOfPayment updates
 
   const fetchUsersDetails = () => {
     dispatch(
@@ -167,10 +230,23 @@ const BillingList = () => {
     );
   };
 
+  const fetchCategories = () => {
+    dispatch(
+      getAllCategories(loginDetails?.logindata?.Token, (callback) => {
+        if (callback.status) {
+          setCategoryOptions(callback?.response?.Details || []);
+        } else {
+          console.log("Callback---------category details--error", callback.error);
+        }
+      })
+    );
+  };
+
   useEffect(() => {
     console.log("Called when id changed");
     fetchBillingDetailsFn();
     fetchUsersDetails();
+    fetchCategories();
     fetchVoidBillList();
     fetchNoShowGuestList();
     if (
@@ -197,6 +273,8 @@ const BillingList = () => {
     setSearhBillId(0);
     setFromDate("");
     setToDate("");
+    setSelectedCategoryId(0);
+    setReportSummary({ allCount: 0, selectedCategoryCount: 0 });
     setReportId(selectedOption?.value);
   };
 
@@ -256,6 +334,11 @@ const BillingList = () => {
     { value: "4", label: "Online" },
     { value: "8", label: "DateRange" },
   ];
+  const filteredReportTypeOptions =
+  loginDetails?.logindata?.UserType === 7
+    ? reportTypeOptions.filter((option) => option.value !== "8")
+    : reportTypeOptions;
+
 
   const searchBtn = () => {
     if (searchBillId && (billDate || userId || shiftId)) {
@@ -281,8 +364,10 @@ const BillingList = () => {
   };
 
   useEffect(() => {
-    searchBtn();
-  }, [searchBillId, futureDate, userId, shiftId, billDate, fromDate, toDate]);
+    if (Number(reportId) !== 8) {
+      searchBtn();
+    }
+  }, [searchBillId, futureDate, userId, shiftId, billDate, fromDate, toDate, reportId]);
 
   useEffect(() => {
     setDisableInput(true);
@@ -290,6 +375,7 @@ const BillingList = () => {
 
   const clearFilters = () => {
     console.log("All clear");
+    // setMethodofPayment(null)
     setFutureDate("");
     setShitId(0);
     setUserId(0);
@@ -298,6 +384,8 @@ const BillingList = () => {
     setBillDate(moment().format('YYYY-MM-DD'));;
     setFromDate("");
     setToDate("");
+    setSelectedCategoryId(0);
+    setReportSummary({ allCount: 0, selectedCategoryCount: 0 });
     fetchBillingDetailsFn();
   };
 
@@ -491,7 +579,46 @@ const BillingList = () => {
   };
 
   const generateReportFn = () => {
-    setReportLoading(true);
+    if (Number(reportId) === 8) {
+      if (!fromDate || !toDate) {
+        toast.error("Please select both From and To dates.");
+        return;
+      }
+
+      const detailedReportData = {
+        fromDate,
+        toDate,
+        categoryId: Number(selectedCategoryId || 0),
+        userTypeRole: Number(loginDetails?.logindata?.UserType || 0),
+      };
+
+      dispatch(
+        generateDetailedReportExcel(
+          loginDetails?.logindata?.Token,
+          detailedReportData,
+          (callback) => {
+            if (callback.status) {
+              setLoading(false);
+              const summary = callback?.response?.Details?.Summary;
+              if (summary) {
+                setReportSummary({
+                  allCount: summary?.allCount || 0,
+                  selectedCategoryCount: summary?.selectedCategoryCount || 0,
+                });
+              }
+              if (callback?.response?.Details?.ReportFile) {
+                window.open(callback?.response?.Details?.ReportFile, "_blank");
+              }
+            } else {
+              console.log("Callback------detailed report error", callback.error);
+              toast.error(callback.error);
+            }
+          }
+        )
+      );
+      return;
+    }
+
     const reportData = {
       userId: userId,
       billDate:fromDate || toDate?"": billDate,
@@ -508,7 +635,7 @@ const BillingList = () => {
         reportData,
         (callback) => {
           if (callback.status) {
-            setReportLoading(false);
+            setLoading(false);
             console.log(
               "Callback------generate report",
               callback?.response?.Details?.ReportFile
@@ -535,14 +662,13 @@ const BillingList = () => {
   };
 
   const generateNoShowBillFn = () => {
-    setReportLoading(true);
     dispatch(
       generateNoShowReport(
         loginDetails?.logindata?.Token,
         eventDate,
         (callback) => {
           if (callback.status) {
-            setReportLoading(false);
+            setLoading(false);
             console.log("Callback------No show bill---", callback?.response);
             window.open(callback?.response?.Details?.ReportFile, "_blank");
           } else {
@@ -714,6 +840,46 @@ const BillingList = () => {
   //     setBillingDetails(filtered);
   //   }
   // };
+
+  // const methodOfPaymentOption = [
+  //   { value: null, label: "Select a payment method" },
+  //   { value: "CASH", label: "Cash" },
+  //   { value: "UPI", label: "UPI" },
+  //   { value: "CC", label: "Credit Card" },
+  //   { value: "DC", label: "Debit Card" },
+  //   { value: "NB", label: "Net Banking" }
+  // ];
+
+  
+  // const handleMOPChange = (selectedOption) => {
+  //   console.log("selectedOption>>", selectedOption);
+  
+  //   // Update only the methodOfPayment without clearing other filters
+  //   setMethodofPayment(selectedOption?.value ? selectedOption.value : null);
+  // };
+  
+  
+  
+  // useEffect(() => {
+  //   const getFilteredData = () => {
+  //     let newFilteredData = [...combinedDataArray];
+  
+  //     // Apply PaymentMode filter if selected
+  //     if (methodOfPayment != null) {
+  //       console.log("MOPPPPPP", methodOfPayment)
+  //       newFilteredData = newFilteredData.filter((group) =>
+  //         group.Items.some((item) => item.PaymentMode === methodOfPayment)
+  //       );
+  //     }
+  //     setFilteredData(newFilteredData);
+  //   };
+  //   // console.log("MOPPPPPP", methodOfPayment)
+  //   console.log("Combined Data Array hehehe:", combinedDataArray);
+  //   getFilteredData();
+  // }, [methodOfPayment]);
+  
+  // // setFilteredData(combinedDataArray)
+  
   return (
     <div>
       <ToastContainer />
@@ -843,6 +1009,27 @@ const BillingList = () => {
                 ) : (
                   <></>
                 )}
+                {reportId == 8 ? (
+                  <div className="col-md-3 col-lg-3 mb-2">
+                    <p style={{ fontWeight: "bold" }}>Category</p>
+                    <div className="input-group">
+                      <select
+                        className="form-control"
+                        value={selectedCategoryId}
+                        onChange={(e) => setSelectedCategoryId(Number(e.target.value))}
+                      >
+                        <option value={0}>All Categories</option>
+                        {categoryOptions?.map((category) => (
+                          <option key={category.Id} value={category.Id}>
+                            {category.Name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                ) : (
+                  <></>
+                )}
 
                 {reportId == 4 ? (
                   <div className="col-md-3 col-lg-2 mb-2">
@@ -879,7 +1066,7 @@ const BillingList = () => {
                   <></>
                 )}
 
-                <div className="col-lg-2 col-md-4 col-sm-6">
+                {/* <div className="col-lg-2 col-md-4 col-sm-6">
                   <p style={{ fontWeight: "bold" }}>Search Report Type</p>
                   <div className="input-group">
                     <Select
@@ -889,7 +1076,31 @@ const BillingList = () => {
                       onChange={handleReportTypeChange}
                     />
                   </div>
-                </div>
+                </div> */}
+                <div className="col-lg-2 col-md-4 col-sm-6">
+  <p style={{ fontWeight: "bold" }}>Search Report Type</p>
+  <div className="input-group">
+    <Select
+      className="custom-select"
+      defaultValue={filteredReportTypeOptions[2]} // Ensure default value is valid
+      options={filteredReportTypeOptions}
+      onChange={handleReportTypeChange}
+    />
+  </div>
+</div>
+
+                {/* <div className="col-lg-2 col-md-4 col-sm-6">
+  <p style={{ fontWeight: "bold" }}>Search By MOP</p>
+  <div className="input-group">
+    <Select
+      className="custom-select"
+      value={methodOfPaymentOption.find(option => option.value === methodOfPayment)}
+      options={methodOfPaymentOption}
+      onChange={handleMOPChange}
+    />
+  </div>
+</div> */}
+
 
                 {reportId == 1 ? (
                   <div className="col-lg-2 col-md-4 col-sm-6">
@@ -906,39 +1117,31 @@ const BillingList = () => {
                   <></>
                 )}
 
-                <div className="col-lg-2 col-md-4 col-sm-6">
-                  {reportloading?(
-                  <tr>
-                    <td colSpan="6" className="text-center">
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "center",
-                          alignItems: "center",
-                          height: "100%",
-                        }}
-                      >
-                        <Oval
-                          height={80}
-                          width={50}
-                          color="#4fa94d"
-                          visible={true}
-                          ariaLabel="oval-loading"
-                          secondaryColor="#4fa94d"
-                          strokeWidth={2}
-                          strokeWidthSecondary={2}
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                ):<button
+                {/* <div className="col-lg-2 col-md-4 col-sm-6">
+                  <button
                     className="btn btn-primary mt-4"
                     onClick={generateReportFn}
                   >
                     Generate Report
-                  </button>}
-                </div>
-
+                  </button>
+                </div> */}
+                {loginDetails?.logindata?.UserType !== 2 && (
+  <div className="col-lg-2 col-md-4 col-sm-6">
+    <button className="btn btn-primary mt-4" onClick={generateReportFn}>
+      {Number(reportId) === 8 ? "Export Excel" : "Generate Report"}
+    </button>
+  </div>
+)}
+                {Number(reportId) === 8 && (
+                  <div className="col-lg-4 col-md-6 col-sm-12 mt-4">
+                    <span className="badge bg-primary me-2">
+                      Total Count (All): {reportSummary.allCount}
+                    </span>
+                    <span className="badge bg-info text-dark">
+                      Selected Category Count: {reportSummary.selectedCategoryCount}
+                    </span>
+                  </div>
+                )}
                 {/* <div className="col-md-1 col-lg-1 d-flex justify-content-end mb-3">
             <button className="btn btn-primary" onClick={searchBtn}>
               Search
@@ -963,274 +1166,125 @@ const BillingList = () => {
               </div>
             </div>
 
-            <table class="table">
-              <thead>
-                <tr>
-                  <th scope="col" className="text-center table_heading">
-                    Bill No
-                  </th>
-                  <th scope="col" className="text-center table_heading">
-                    Guest Name
-                  </th>
-                  <th scope="col" className="text-center table_heading">
-                    Package Name
-                  </th>
-                  <th scope="col" className="text-center table_heading">
-                    Package Amount
-                  </th>
+            <table className="table">
+  <thead>
+    <tr>
+      <th scope="col" className="text-center table_heading">Bill No</th>
+      <th scope="col" className="text-center table_heading">Guest Name</th>
+      <th scope="col" className="text-center table_heading">Package Name</th>
+      <th scope="col" className="text-center table_heading">Package Amount</th>
+      <th scope="col" className="text-center table_heading">Date & Time</th>
+      <th scope="col" className="text-center table_heading">Shift</th>
+      <th scope="col" className="text-center table_heading">Void Bill</th>
+      {(loginDetails?.logindata?.UserType === 1 ||
+        loginDetails?.logindata?.UserType === 2 ||
+        loginDetails?.logindata?.UserType === 3) && (
+        <th scope="col" className="text-center table_heading">Reprint Bill</th>
+      )}
+      <th scope="col" className="text-center table_heading">View more</th>
+    </tr>
+  </thead>
+  <tbody>
+    {loading ? (
+      <tr>
+        <td colSpan="8" className="text-center">
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100%" }}>
+            <Oval height={80} width={50} color="#4fa94d" visible={true} ariaLabel="oval-loading" secondaryColor="#4fa94d" strokeWidth={2} strokeWidthSecondary={2} />
+          </div>
+        </td>
+      </tr>
+    ) : combinedDataArray.length === 0 ? (
+      <tr>
+        <td colSpan="8" className="text-center">No data found.</td>
+      </tr>
+    ) : (
+      combinedDataArray.map((item) => (
+        <tr key={item?.id}>
+          <td className="manager-list">{item?.Items?.[0]?.BillNumber ?? "-"}</td>
+          <td className="manager-list">{item?.Items?.[0]?.GuestName ?? "-"}</td>
 
-                  {/* <th scope="col" className="text-center table_heading">
-                    Total Amount
-                  </th> */}
+          {/* Package Name */}
+          <td className="manager-list">
+            {item?.Items?.[0]?.PackageName
+              ? JSON.parse(item?.Items[0]?.PackageName ?? "[]").map((pkg, index) => (
+                  <li key={index} style={{ listStyleType: "none" }}>{pkg}</li>
+                ))
+              : <span>No package name available</span>
+            }
+          </td>
 
-                  <th scope="col" className="text-center table_heading">
-                    Date & Time
-                  </th>
+          {/* Package Amount */}
+          <td className="manager-list">
+            {item?.Items?.[0]?.TeensPrice === 0 && (item?.Items?.[0]?.FinalPrice ?? []).length !== 0 && (
+              <div>
+                {(item?.Items?.[0]?.FinalPrice ?? []).map((price, index) => (
+                  <li key={index} style={{ listStyleType: "none" }}>{price}</li>
+                ))}
+              </div>
+            )}
+            {item?.Items?.[0]?.TeensPrice !== 0 && (item?.Items?.[0]?.FinalPrice ?? []).length !== 0 && (
+              <div>
+                {(item?.Items?.[0]?.FinalPrice ?? []).map((price, index) => (
+                  <li key={index} style={{ listStyleType: "none" }}>{price}</li>
+                ))}
+                <div>{item?.Items?.[0]?.TeensPrice}</div>
+              </div>
+            )}
+            {item?.Items?.[0]?.TeensPrice !== 0 && (item?.Items?.[0]?.FinalPrice ?? []).length === 0 && (
+              <div>{item?.Items?.[0]?.TeensPrice}</div>
+            )}
+          </td>
 
-                  <th scope="col" className="text-center table_heading">
-                    Shift
-                  </th>
+          {/* Date & Time */}
+          <td className="manager-list">
+            {moment(item?.Items?.[0]?.BillingDate).format("DD/MM/YYYY")}{" "}
+            {item?.Items?.[0]?.ActualBillingTime ?? "-"}
+          </td>
 
-                  <th scope="col" className="text-center table_heading">
-                    Void Bill
-                  </th>
+          {/* Shift */}
+          <td className="manager-list">{item?.Items?.[0]?.ShiftId === 0 ? "-" : item?.Items?.[0]?.ShiftId}</td>
 
-                  {loginDetails?.logindata?.UserType === 1 ||
-                  loginDetails?.logindata?.UserType === 2 ||
-                  loginDetails?.logindata?.UserType === 3 ? (
-                    <th scope="col" className="text-center table_heading">
-                      Reprint Bill
-                    </th>
-                  ) : (
-                    <></>
-                  )}
+          {/* Void Bill */}
+          {(loginDetails?.logindata?.UserType === 2 &&
+            activeDateOfOutlet?.OutletDate === moment(item?.Items?.[0]?.BillingDate).format("YYYY-MM-DD")) ||
+          (loginDetails?.logindata?.UserType === 1 &&
+            activeDateOfOutlet?.OutletDate === moment(item?.Items?.[0]?.BillingDate).format("YYYY-MM-DD")) ? (
+            <>
+              {item?.Items?.[0]?.IsVoid == null || item?.Items?.[0]?.IsVoid == 0 ? (
+                <td style={{ textAlign: "center" }}>
+                  <FcCancel onClick={() => openModal(item)} style={{ height: "22px", width: "22px" }} />
+                </td>
+              ) : (
+                <td className="manager-list" style={{ color: item?.Items?.[0]?.IsVoid === 1 ? "red" : "green" }}>
+                  {item?.Items?.[0]?.IsVoid === 1 ? "Void" : "Active"}
+                </td>
+              )}
+            </>
+          ) : (
+            <td className="text-center" style={{ fontSize: "25px" }}>-</td>
+          )}
 
-                  <th scope="col" className="text-center table_heading">
-                    View more
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan="6" className="text-center">
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "center",
-                          alignItems: "center",
-                          height: "100%",
-                        }}
-                      >
-                        <Oval
-                          height={80}
-                          width={50}
-                          color="#4fa94d"
-                          visible={true}
-                          ariaLabel="oval-loading"
-                          secondaryColor="#4fa94d"
-                          strokeWidth={2}
-                          strokeWidthSecondary={2}
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                ) : combinedDataArray.length === 0 ? (
-                  <tr>
-                    <td colSpan="6" className="text-center">
-                      No data found.
-                    </td>
-                  </tr>
-                ) : (
-                  combinedDataArray.map(
-                    (item) => (
-                      console.log(
-                        "bill dateeeeee_>>>>>.",
+          {/* Reprint Bill */}
+          {(loginDetails?.logindata?.UserType === 1 ||
+            loginDetails?.logindata?.UserType === 2 ||
+            loginDetails?.logindata?.UserType === 3) && (
+            <td style={{ textAlign: "center" }}>
+              <AiOutlinePrinter style={{ height: "22px", width: "22px" }} onClick={() => regenerateBillFn(item)} />
+            </td>
+          )}
 
-                        moment(item?.Items[0]?.BillingDate).format("YYYY-MM-DD")
-                      ),
-                      (
-                        <tr key={item.id}>
-                          <td className="manager-list">
-                            {/* {item?.Items[0]?.BillingId} */}
-                            {item?.Items[0]?.BillNumber}
-                          </td>
-                          <td className="manager-list ">
-                            {item?.Items[0]?.GuestName}
-                          </td>
-
-                          {/*Package name */}
-                          <td className="manager-list">
-                            {item &&
-                            item?.Items[0] &&
-                            item?.Items[0]?.PackageName ? (
-                              JSON.parse(item?.Items[0]?.PackageName).map(
-                                (item, index) => (
-                                  <li
-                                    key={index}
-                                    style={{ listStyleType: "none" }}
-                                  >
-                                    {item}{" "}
-                                  </li>
-                                )
-                              )
-                            ) : (
-                              <span>No package name available</span>
-                            )}
-                          </td>
-
-                          {/* <td className="manager-list">
-                            {item?.Items[0]?.FinalPrice?.map((price, index) => (
-                              <li key={index} style={{ listStyleType: "none" }}>
-                                {price}
-                              </li>
-                            ))}
-                          </td> */}
-                          {/*Package Amount */}
-                          <td className="manager-list">
-                            {/* {item?.Items[0]?.FinalPrice?.map((price, index) => (
-                              <li key={index} style={{ listStyleType: "none" }}>
-                                {price}
-                              </li>
-                            ))} */}
-                            {item?.Items[0]?.TeensPrice === 0 &&
-                              item?.Items[0]?.FinalPrice.length !== 0 && (
-                                // Display only price
-                                <div>
-                                  {item?.Items[0]?.FinalPrice?.map(
-                                    (price, index) => (
-                                      <li
-                                        key={index}
-                                        style={{ listStyleType: "none" }}
-                                      >
-                                        {price}
-                                      </li>
-                                    )
-                                  )}
-                                </div>
-                              )}
-                            {item?.Items[0]?.TeensPrice !== 0 &&
-                              item?.Items[0]?.FinalPrice.length !== 0 && (
-                                <div>
-                                  {item?.Items[0]?.FinalPrice?.map(
-                                    (price, index) => (
-                                      <li
-                                        key={index}
-                                        style={{ listStyleType: "none" }}
-                                      >
-                                        {price}
-                                      </li>
-                                    )
-                                  )}
-                                  <div>{item?.Items[0]?.TeensPrice}</div>
-                                </div>
-                              )}
-                            {item?.Items[0]?.TeensPrice !== 0 &&
-                              item?.Items[0]?.FinalPrice.length === 0 && (
-                                <div>{item?.Items[0]?.TeensPrice}</div>
-                              )}
-                          </td>
-
-                          {/* <td className="manager-list">
-                            {item?.Items[0]?.ActualAmount -
-                              item?.Items[0]?.AmountAfterDiscount ==
-                            0
-                              ? item?.Items[0]?.ActualAmount
-                              : item?.Items[0]?.AmountAfterDiscount}
-                          </td> */}
-                          {/*Date & Time*/}
-                          <td className="manager-list">
-                            {/* {item?.Items[0]?.BillingDate.slice(0, 10)}{" "} */}
-                            {moment(item?.Items[0]?.BillingDate).format(
-                              "DD/MM/YYYY"
-                            )}{" "}
-                            {item?.Items[0]?.ActualBillingTime}
-                          </td>
-                          <td className="manager-list">
-                            {item.Items[0]?.ShiftId == 0
-                              ? "-"
-                              : item.Items[0]?.ShiftId}
-                          </td>
-                          {(loginDetails?.logindata?.UserType === 2 &&
-                            activeDateOfOutlet?.OutletDate ==
-                              moment(item?.Items[0]?.BillingDate).format(
-                                "YYYY-MM-DD"
-                              )) ||
-                          (loginDetails?.logindata?.UserType === 1 &&
-                            activeDateOfOutlet?.OutletDate ==
-                              moment(item?.Items[0]?.BillingDate).format(
-                                "YYYY-MM-DD"
-                              )) ? (
-                            <>
-                              {item?.Items[0]?.IsVoid == null ||
-                              item?.Items[0]?.IsVoid == 0 ? (
-                                <td style={{ textAlign: "center" }}>
-                                  <FcCancel
-                                    onClick={() => openModal(item)}
-                                    style={{ height: "22px", width: "22px" }}
-                                  />
-                                </td>
-                              ) : (
-                                <td
-                                  className="manager-list"
-                                  style={{
-                                    color:
-                                      item?.Items[0]?.IsVoid === 1
-                                        ? "red"
-                                        : "green",
-                                  }}
-                                >
-                                  {item?.Items[0]?.IsVoid == 1
-                                    ? "Void"
-                                    : "Active"}
-                                </td>
-                              )}
-                            </>
-                          ) : (
-                            <p
-                              className="text-center"
-                              style={{ fontSize: "25px" }}
-                            >
-                              -
-                            </p>
-                          )}
-                          {/*Reprint Bill */}
-                          {loginDetails?.logindata?.UserType === 1 ||
-                          loginDetails?.logindata?.UserType === 2 ||
-                          loginDetails?.logindata?.UserType === 3 ? (
-                            <td style={{ textAlign: "center" }}>
-                              <AiOutlinePrinter
-                                style={{ height: "22px", width: "22px" }}
-                                onClick={() => regenerateBillFn(item)}
-                              />
-                            </td>
-                          ) : (
-                            <></>
-                          )}
-
-                          <td
-                            className="manager-list"
-                            // onClick={() => handleViewMore(item?.Items[0])}
-                          >
-                            {/* <img src={more} className="more_img" /> */}
-                            <CiCircleMore
-                              onClick={() => handleViewMore(item?.Items[0])}
-                              style={{
-                                height: "22px",
-                                width: "22px",
-                              }}
-                            />
-                          </td>
-                        </tr>
-                      )
-                    )
-                  )
-                )}
-              </tbody>
-            </table>
+          {/* View More */}
+          <td className="manager-list">
+            <CiCircleMore onClick={() => handleViewMore(item?.Items?.[0])} style={{ height: "22px", width: "22px" }} />
+          </td>
+        </tr>
+      ))
+    )}
+  </tbody>
+</table>
           </>
         )}
-
+        
       {allBill === false &&
         voidBillList === true &&
         noShowGuestList === false && ( // show void bill list

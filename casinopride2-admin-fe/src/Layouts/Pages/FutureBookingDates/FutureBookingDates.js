@@ -13,7 +13,10 @@ import "../../../assets/global.css";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { Button, Modal } from "react-bootstrap";
-import { getFutureBookingDatesDetails } from "../../../Redux/actions/users";
+import {
+  deleteFutureBookingDatePeriod,
+  getFutureBookingDatesDetails,
+} from "../../../Redux/actions/users";
 import moment from "moment";
 
 const FutureBookingDates = () => {
@@ -25,6 +28,7 @@ const FutureBookingDates = () => {
 
   const [discountDetails, setDiscountDetails] = useState([]);
   const [futureDates, setFutureDates] = useState("");
+  const [blockedDates, setBlockedDates] = useState([]);
 
   const [filteredDiscountDetails, setFilteredDiscountDetails] = useState([]);
 
@@ -51,9 +55,11 @@ const FutureBookingDates = () => {
               callback?.response
             );
 
-            setFilteredDiscountDetails(callback?.response?.Details);
-            setDiscountDetails(callback?.response?.Details);
-            setFutureDates(callback?.response?.Details);
+            const details = callback?.response?.Details || {};
+            setFilteredDiscountDetails(details);
+            setDiscountDetails(details);
+            setFutureDates(details);
+            setBlockedDates(details?.BlockedDates || []);
           }
         }
       )
@@ -99,6 +105,23 @@ const FutureBookingDates = () => {
     console.log("PackageId", PackageId);
   };
 
+  const deleteDatePeriod = (blockedDateId) => {
+    dispatch(
+      deleteFutureBookingDatePeriod(
+        loginDetails?.logindata?.Token,
+        blockedDateId,
+        (callback) => {
+          if (callback.status) {
+            toast.success("Date period deleted");
+            getchFutureBookingDates();
+          } else {
+            toast.error(callback.error || "Failed to delete date period");
+          }
+        }
+      )
+    );
+  };
+
   const formattedStartDate = moment(filteredDiscountDetails.StartDate).format(
     "YYYY-MM-DD"
   );
@@ -124,26 +147,25 @@ const FutureBookingDates = () => {
               />
             </div>
           </div> */}
-          {!futureDates ? (
-            <div className="col-md-4 col-lg-12 d-flex justify-content-end mb-3">
-              <button className="btn btn-primary">
-                <Link
-                  to="/AddFutureBookingDates"
-                  state={{ userType: "4" }}
-                  className="addLinks"
-                >
-                  Add Future Booking Dates
-                </Link>
-              </button>
-            </div>
-          ) : (
-            <></>
-          )}
+          <div className="col-md-4 col-lg-12 d-flex justify-content-end mb-3">
+            <button className="btn btn-primary">
+              <Link
+                to="/AddFutureBookingDates"
+                state={{ userType: "4" }}
+                className="addLinks"
+              >
+                Add Date Period
+              </Link>
+            </button>
+          </div>
         </div>
       </div>
       <table className="table">
         <thead>
           <tr>
+            <th scope="col" className="text-center table_heading">
+              Type
+            </th>
             <th scope="col" className="text-center table_heading">
               Start Date
             </th>
@@ -153,12 +175,15 @@ const FutureBookingDates = () => {
             <th scope="col" className="text-center table_heading">
               Edit
             </th>
+            <th scope="col" className="text-center table_heading">
+              Delete
+            </th>
           </tr>
         </thead>
         <tbody>
           {loading ? (
             <tr>
-              <td colSpan="4" className="text-center">
+              <td colSpan="5" className="text-center">
                 <div
                   style={{
                     display: "flex",
@@ -182,13 +207,14 @@ const FutureBookingDates = () => {
             </tr>
           ) : filteredDiscountDetails.length === 0 ? (
             <tr>
-              <td colSpan="2" className="text-center">
+              <td colSpan="5" className="text-center">
                 No data found.
               </td>
             </tr>
           ) : (
             filteredDiscountDetails && (
               <tr>
+                <td className="manager-list">Booking Window</td>
                 <td className="manager-list">{formattedStartDate}</td>
                 <td className="manager-list">{formattedEndDate}</td>
 
@@ -203,9 +229,45 @@ const FutureBookingDates = () => {
                     />
                   </Link>
                 </td>
+                <td className="manager-list">-</td>
               </tr>
             )
           )}
+          {!loading &&
+            blockedDates.map((datePeriod) => (
+              <tr key={datePeriod.Id}>
+                <td className="manager-list">
+                  {datePeriod.DateType === "sold_out" ? "Sold Out" : "Black Out"}
+                </td>
+                <td className="manager-list">
+                  {moment(datePeriod.StartDate).format("YYYY-MM-DD")}
+                </td>
+                <td className="manager-list">
+                  {moment(datePeriod.EndDate).format("YYYY-MM-DD")}
+                </td>
+                <td className="manager-list">
+                  <Link
+                    to="/AddFutureBookingDates"
+                    state={{ userData: datePeriod }}
+                    className="links"
+                  >
+                    <AiFillEdit
+                      style={{ color: "#C5CEE0", fontSize: "20px" }}
+                    />
+                  </Link>
+                </td>
+                <td className="manager-list">
+                  <button
+                    className="btn btn-link p-0"
+                    onClick={() => deleteDatePeriod(datePeriod.Id)}
+                  >
+                    <AiFillDelete
+                      style={{ color: "#d32f2f", fontSize: "20px" }}
+                    />
+                  </button>
+                </td>
+              </tr>
+            ))}
         </tbody>
       </table>
       <ToastContainer />

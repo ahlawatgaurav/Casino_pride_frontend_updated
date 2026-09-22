@@ -73,7 +73,7 @@ export const getUserByPhone =
   (token, phone, callback) => async (dispatch) => {
     console.log(token);
 
-    api.BOOKING_PORT.get(`/booking/getUserByPhone?phone=${phone}`, {
+    api.CORE_PORT.get(`/core/getUserByPhone?phone=${phone}`, {
       headers: { AuthToken: token },
     })
       .then((response) => {

@@ -720,7 +720,7 @@ const NewBooking = () => {
                   <div className="col-md-6 col-lg-3">
                     <div className="image-container d-flex flex-column align-items-center">
                       <img
-                        src="https://www.casinoprideofficial.com/assets/images/red-carpet.png"
+                        src="/assets/images/red-carpet.png"
                         alt="Image 1"
                         className="img-fluid"
                       />
@@ -732,7 +732,7 @@ const NewBooking = () => {
                   <div className="col-md-6 col-lg-3">
                     <div className="image-container d-flex flex-column align-items-center">
                       <img
-                        src="https://www.casinoprideofficial.com/assets/images/buffet.png"
+                        src="/assets/images/buffet.png"
                         alt="Image 2"
                         className="img-fluid"
                       />
@@ -744,7 +744,7 @@ const NewBooking = () => {
                   <div className="col-md-6 col-lg-3">
                     <div className="image-container d-flex flex-column align-items-center">
                       <img
-                        src="https://www.casinoprideofficial.com/assets/images/bonus.png"
+                        src="/assets/images/bonus.png"
                         alt="Image 3"
                         className="img-fluid"
                       />
@@ -754,7 +754,7 @@ const NewBooking = () => {
                   <div className="col-md-6 col-lg-3">
                     <div className="image-container d-flex flex-column align-items-center">
                       <img
-                        src="https://www.casinoprideofficial.com/assets/images/headphones.png"
+                        src="/assets/images/headphones.png"
                         alt="Image 4"
                         className="img-fluid"
                       />

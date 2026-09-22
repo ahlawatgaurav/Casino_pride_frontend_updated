@@ -1,6 +1,4 @@
 import React, { useMemo, useState } from "react";
-import { Country, State, City } from "country-state-city";
-import Select from "react-select";
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import {
@@ -8,8 +6,9 @@ import {
   getPanelDiscounts,
   EditUsedCoupon,
   getUserByPhone,
+  checkActiveOutlet,
 } from "../../Redux/actions/users";
-import { AddBookingFn, SendBookingConfirmMail, SendPaymentLinkToCustomer } from "../../Redux/actions/booking";
+import { AddBookingFn, SendBookingConfirmMail } from "../../Redux/actions/booking";
 import { connect, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
@@ -40,6 +39,18 @@ const NewBooking = () => {
   const location = useLocation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const getInitialFutureDate = () => {
+    const currentUrl = new URL(window.location.href);
+    const routedDate =
+      location?.state?.futureDate ||
+      location?.state?.bookingDate ||
+      currentUrl.searchParams.get("futureDate") ||
+      currentUrl.searchParams.get("bookingDate");
+
+    return moment(routedDate, "YYYY-MM-DD", true).isValid()
+      ? routedDate
+      : new Date().toLocaleDateString("en-CA");
+  };
 
   const loginDetails = useSelector(
     (state) => state.auth?.userDetailsAfterLogin.Details
@@ -48,6 +59,38 @@ const NewBooking = () => {
   console.log("loginDetails-------------->", loginDetails);
 
   const outletOpenDetails = useSelector((state) => state.auth?.outeltDetails);
+
+  // Weekday/weekend pricing must follow the BUSINESS day, not the calendar day.
+  // The 3rd shift runs past midnight, so the day changes when the outlet closes
+  // (~3:30 AM), not at 12 AM. Advance bookings keep the date the agent picked.
+  const [outletBusinessDate, setOutletBusinessDate] = useState("");
+  useEffect(() => {
+    const token = loginDetails?.logindata?.Token;
+    if (!token) return;
+    dispatch(
+      checkActiveOutlet(token, (cb) => {
+        const d = cb?.status ? cb?.response?.Details?.OutletDate : null;
+        if (d && moment(d).isValid()) {
+          setOutletBusinessDate(moment(d).format("YYYY-MM-DD"));
+        }
+      })
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loginDetails?.logindata?.Token]);
+
+  const hasRoutedDate = (() => {
+    try {
+      const u = new URL(window.location.href);
+      return !!(
+        location?.state?.futureDate ||
+        location?.state?.bookingDate ||
+        u.searchParams.get("futureDate") ||
+        u.searchParams.get("bookingDate")
+      );
+    } catch (e) {
+      return false;
+    }
+  })();
 
   console.log(
     "outlet open Details-----------------|||||||||||||||||||||||||-->",
@@ -58,9 +101,12 @@ const NewBooking = () => {
     (state) => state.auth?.userDetailsAfterValidation
   );
 
-  console.log(
-    "Validate details------------->",
-    validateDetails?.Details?.DiscountPercent
+  const [maxAgentDiscount, setMaxAgentDiscount] = useState(0);
+  // Call Centre gets per-package discounts; resolved from the logged-in user's category.
+  const [isCallCenter, setIsCallCenter] = useState(false);
+  const [packageDiscounts, setPackageDiscounts] = useState([]);
+  const [agentDiscountPercent, setAgentDiscountPercent] = useState(
+    Number(validateDetails?.Details?.DiscountPercent) || 0
   );
 
   const [userId, setUserId] = useState(null);
@@ -71,6 +117,54 @@ const NewBooking = () => {
     setUserId(userIdValue);
   }, []);
 
+  // The default Agent Discount must reflect the agent's CURRENT saved discount
+  // (changed on the Discounts page). validateDetails is cached at login and goes
+  // stale, so fetch the latest DiscountPercent fresh from the server on mount.
+  useEffect(() => {
+    const agentId = loginDetails?.logindata?.userId;
+    const token = loginDetails?.logindata?.Token;
+    if (!agentId) return;
+    (async () => {
+      try {
+        const { default: api } = await import("../../Service/api");
+        const res = await api.CORE_PORT.get(
+          `/core/getUserById?userId=${agentId}`,
+          { headers: token ? { AuthToken: token } : {} }
+        );
+        const d = res.data?.Details;
+        if (d && d.DiscountPercent != null) {
+          setAgentDiscountPercent(Number(d.DiscountPercent) || 0);
+        }
+      } catch (e) {}
+    })();
+  }, [loginDetails?.logindata?.userId, loginDetails?.logindata?.Token]);
+
+  useEffect(() => {
+    const categoryId = validateDetails?.Details?.CategoryId;
+    const token = loginDetails?.logindata?.Token;
+    if (!categoryId) return;
+
+    const fetchMax = async () => {
+      try {
+        const { default: api } = await import("../../Service/api");
+        const res = await api.CORE_PORT.get("/core/categories", {
+          headers: token ? { AuthToken: token } : {},
+        });
+        const cats = res.data?.Details || [];
+        const match = cats.find((c) => Number(c.Id) === Number(categoryId));
+        if (match && match.DiscountPercent > 0) {
+          setMaxAgentDiscount(Number(match.DiscountPercent));
+        }
+        if (match) {
+          const nm = String(match.Name || match.Category || "").toLowerCase();
+          setIsCallCenter(nm.includes("call cent"));
+        }
+      } catch (e) {}
+    };
+
+    fetchMax();
+  }, [validateDetails?.Details?.CategoryId, loginDetails?.logindata?.Token]);
+
   console.log(
     "userId--------------------------||||||||||||||||||________------------->",
     userId
@@ -79,19 +173,16 @@ const NewBooking = () => {
   const [shiftDetails, setShiftDetails] = useState("");
 
   const [guestName, setGuestName] = useState("");
-  const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
 
   const [totalGuestCount, settoalGuestCount] = useState("");
-  const [dateofbirth, setDateofbirth] = useState("");
-  const [futureDate, setFutureDate] = useState(new Date().toLocaleDateString('en-CA'));
+  const [futureDate, setFutureDate] = useState(getInitialFutureDate);
   const [numberofteens, setNumberofteens] = useState("");
+  const [hasKids, setHasKids] = useState(0);
+  const [numOfKids, setNumOfKids] = useState(0);
   const [settlementBycompany, setSettlementbycompany] = useState("");
   const [couponCode, setCouponCode] = useState("");
   const [governmentId, setgovernmentId] = useState("");
-  const [gstNumber, setgstNumber] = useState("");
-  const [isGstValid, setIsGstValid] = useState(true);
   const [amount, setamount] = useState("");
   const [packageIds, setPackageIds] = useState([]);
   const [packageGuestCount, setPackageGuestCount] = useState([]);
@@ -125,8 +216,7 @@ const NewBooking = () => {
   const [teensWeekdayPrice, setTeensWeekdayPrice] = useState("");
   const [teensWeekendPrice, setTeensWeekendPrice] = useState("");
   const [teensPackageName, setTeensPackageName] = useState("");
-
-  const [agentDiscount, setAgentDiscount] = useState(0);
+  const [customerCategoryId, setCustomerCategoryId] = useState(null);
 
   const [loader, setLoader] = useState(false);
 
@@ -136,20 +226,12 @@ const NewBooking = () => {
       getUserByPhone(loginDetails?.logindata?.Token, phoneNumber, (callback) => {
         if (callback.status) {
           const userData = callback?.response?.Details;
-          setGuestName(userData?.FullName);
-          setEmail(userData?.Email);
-          setAddress(userData?.Address);
-          setgstNumber(userData?.GSTNumber);
-          setSelectedCity(userData?.City);
-          let countrySelected = Country.getAllCountries().filter((country) => country.name === userData?.Country)?.[0];
-          setSelectedCountry({
-            label: countrySelected?.name,
-            value: countrySelected?.name,
-            isoCode: countrySelected?.isoCode
-          });
-          let stateSelected = State?.getStatesOfCountry(countrySelected?.isoCode || selectedCountry?.isoCode).filter((state) => state.name === userData?.State)?.[0];
-          setSelectedState(stateSelected);
-          setDateofbirth(userData?.DOB);
+          // Only prefill the name if the looked-up customer actually has one —
+          // never overwrite a typed name with null/blank.
+          if (userData?.FullName) setGuestName(userData.FullName);
+          setCustomerCategoryId(
+            userData?.CategoryId ? Number(userData.CategoryId) : null
+          );
           console.log("Callback---------get user details", callback?.response);
         }
       })
@@ -164,19 +246,6 @@ const NewBooking = () => {
       }, DEBOUNCE_TIME_MS),
     [fetchUserByPhone]
    );
-
-  const handleDiscountChange = (e) => {
-    let inputValue = parseFloat(e.target.value);
-
-    if (isNaN(inputValue) || inputValue < 0) {
-      inputValue = "";
-    } else if (inputValue > validateDetails?.Details?.DiscountPercent) {
-      //checking if the discount that is added is more than the discount percent of the agent
-      inputValue = validateDetails?.Details?.DiscountPercent;
-    }
-    setAgentDiscount(inputValue);
-  };
-
 
   const [packageWeekdaysPrice, setPackageWeekdaysPrice] = useState("");
   const [packageWeekendPrice, setPackageWeekendPrice] = useState("");
@@ -218,20 +287,6 @@ const NewBooking = () => {
 
   console.log("couponCode--------------->", couponCode);
 
-  const [selectedCountry, setSelectedCountry] = useState({
-    label: "India",
-    name: "India",
-    isoCode: "IN",
-  });
-  const [selectedState, setSelectedState] = useState(null);
-  const [selectedCity, setSelectedCity] = useState(null);
-
-  useEffect(() => {
-    console.log(selectedCountry);
-    console.log(selectedCountry?.isoCode);
-    console.log(State?.getStatesOfCountry(selectedCountry?.isoCode));
-  }, [selectedCountry]);
-
   const fetchCouponCodes = () => {
     dispatch(
       getCouponsbyInitials(loginDetails?.logindata?.Token, 4, (callback) => {
@@ -258,6 +313,7 @@ const NewBooking = () => {
 
   const [startDate, setStarteDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [blockedDates, setBlockedDates] = useState([]);
   const [amountAfterWebsiteDiscount, setAmountAfterWebsiteDiscount] =
     useState("");
 
@@ -271,14 +327,10 @@ const NewBooking = () => {
           );
           setStarteDate(callback?.response?.Details?.StartDate);
           setEndDate(callback?.response?.Details?.EndDate);
+          setBlockedDates(callback?.response?.Details?.BlockedDates || []);
         }
       })
     );
-  };
-
-  const isValidEmail = (email) => {
-    const emailPattern = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
-    return emailPattern.test(email);
   };
 
   const currentDate = new Date();
@@ -374,20 +426,6 @@ const NewBooking = () => {
 
   console.log("usedCouponArr-------------->", usedCouponArr);
 
-  const handleGstChange = (e) => {
-    const newGstNumber = e.target.value;
-    setgstNumber(newGstNumber);
-
-    if (e.target.value.length == 0) {
-      setIsGstValid(true);
-    } else if (e.target.value.length != 0 && e.target.value.length == 15) {
-      setgstNumber(e.target.value);
-      setIsGstValid(true);
-    } else {
-      setIsGstValid(false);
-    }
-  };
-
   const onsubmit = () => {
     setLoader(true);
     console.log("Package ID ------->", [teenpackageId]);
@@ -395,41 +433,65 @@ const NewBooking = () => {
     const teenpackageIdArray = [];
 
     teenpackageIdArray.push(teenpackageId);
-    if (guestName == "" || phone === "" || address == "") {
+    if (!guestName || String(guestName).trim() === "" || phone === "") {
       toast.warning("Please fill all the fields");
-      setLoader(false);
-    } else if (!isValidEmail(email)) {
-      toast.warning("Please enter a valid email address");
       setLoader(false);
     } else if (futureDate == "") {
       toast.warning("Please select a date");
       setLoader(false);
-    } else if (!isGstValid) {
-      toast.warning("Please enter a valid gst number");
+    } else if (getBlockedPeriodForDate(futureDate)) {
+      const blockedPeriod = getBlockedPeriodForDate(futureDate);
+      toast.error(
+        blockedPeriod.DateType === "sold_out"
+          ? "This date is sold out. Please contact admin."
+          : "This date is blacked out. Please contact admin."
+      );
+      setLoader(false);
+    } else if (getBookingWindowMessage()) {
+      toast.warning(getBookingWindowMessage());
+      setLoader(false);
+    } else if (
+      moment(futureDate).isBefore(moment(minBookingDate), "day") ||
+      moment(futureDate).isAfter(moment(formattedEndDate), "day")
+    ) {
+      toast.warning(
+        `Please select a date between ${minBookingDate} and ${formattedEndDate}`
+      );
+      setLoader(false);
+    } else if (hasKids == 1 && Number(numOfKids || 0) < 1) {
+      toast.warning("Please enter number of kids");
       setLoader(false);
     } else {
+      const agentDiscountedAmount = agentDiscountPercent > 0
+        ? amount - (amount * agentDiscountPercent / 100)
+        : null;
+
+      const finalAmountAfterDiscount = isCallCenter
+        ? (amountAfterDiscount !== "" && amountAfterDiscount !== null
+            ? amountAfterDiscount
+            : amount)
+        : couponDiscount !== "" && couponDiscount !== null
+          ? couponDiscount
+          : agentDiscountedAmount !== null
+          ? agentDiscountedAmount
+          : amountAfterDiscount !== "" && amountAfterDiscount !== null
+          ? amountAfterDiscount
+          : amount;
       const data = {
         guestName: guestName,
-        address: address,
         phone: phone,
-        email: email,
-        dob: dateofbirth,
-        country: selectedCountry?.name,
-        state: selectedState?.name,
-        city: selectedCity,
-        GSTNumber: gstNumber,
         governmentId: governmentId,
         totalGuestCount: totalGuestCount,
-        numOfTeens: numberofteens,
+        hasKids: hasKids,
+        numOfKids: numOfKids,
+        numOfTeens: 0,
         teensPrice: totalteensPrice,
         teensRate: totalTeensRate,
         teensTax: teenstaxPercentage,
         teensTaxName: teensTaxName,
         // discountId:2,
-        bookingDate: new Date()?.toLocaleDateString('en-CA'),
+        bookingDate: futureDate,
         futureDate: futureDate,
-        agentPanelDiscount: agentDiscount,
-        discount: agentDiscount,
         panelDiscountId: selectedOption,
         couponId: couponId,
         referredBy: referredBy,
@@ -439,6 +501,7 @@ const NewBooking = () => {
             ? JSON.stringify(teenpackageIdArray)
             : JSON.stringify(packageIds),
         packageGuestCount: JSON.stringify(packageGuestCount),
+        packageDiscounts: JSON.stringify(packageDiscounts || []),
         userId: loginDetails?.logindata?.userId,
         userTypeId: loginDetails?.logindata?.UserType,
         // travelAgentName: Discountpercent
@@ -447,14 +510,13 @@ const NewBooking = () => {
         travelAgentId: loginDetails?.logindata?.userId,
         shiftId: 0,
         actualAmount: amount,
-        paymentMode:  paymentOption == 1 ? "" :"OnlinePayu",
-        amountAfterDiscount:
-          amount - agentDiscountedAmount == 0 ? amount : agentDiscountedAmount,
+        paymentMode: "",
+        amountAfterDiscount: finalAmountAfterDiscount,
         packageName: JSON.stringify(packageName),
         packageWeekdayPrice: JSON.stringify(packageWeekdaysPrice),
         packageWeekendPrice: JSON.stringify(packageWeekendPrice),
         isBookingWebsite: 0,
-        isActive: paymentOption == 1 ? 1 : 0,
+        isActive: 1,
         payAtCounter: paymentOption == 1 ? 1 : 0,
         travelAgentName:validateDetails?.Details?.Name
       };
@@ -476,16 +538,15 @@ const NewBooking = () => {
             if (couponToggle) {
               couponCodeAppend();
             }
-            console.log({paymentOption})
-            
-            if (paymentOption == 2) {
+            if (paymentOption != 1) {
               const internalMailData = {
                 amount, 
                 packageName: JSON.stringify(packageName),
                 guestCount: totalGuestCount,
-                numOfTeens: numberofteens,
+                hasKids: hasKids,
+                numOfKids: numOfKids,
+                numOfTeens: 0,
                 fullName: guestName,
-                email: email,
                 phone: phone, 
                 governmentId:governmentId,
                 bookingDate: new Date().toISOString().slice(0,10),
@@ -495,38 +556,6 @@ const NewBooking = () => {
               navigate("/GenerateBill", {
                 state: { userData: callback?.response?.Details },
               });
-            } else if(paymentOption == 3) {
-              dispatch(SendPaymentLinkToCustomer(loginDetails?.logindata?.Token, {
-                phone,
-                bookingId: callback?.response?.Details?.Id,
-              }, (callback) => {
-                if(callback.status) {
-
-                  let shortUrl = callback?.response?.Details?.shortUrl;
-                  const apiUrl = `https://commnestsms.com/api/push.json?apikey=635cd8e64fddd&route=transactional&sender=CPGOAA&mobileno=${phone}&text=Thank%20you%20for%20choosing%20Casino%20Pride.%20Please%20follow%20the%20link%20${shortUrl}%20for%20payment%20of%20Rs%20${amount - agentDiscountedAmount == 0 ? amount : agentDiscountedAmount}%20to%20confirm%20your%20booking%20with%20us.%0ALets%20Play%20with%20Pride%20!%0A24x7%20Helpline%20-%209158885000%0AGood%20luck%20!%0ATeam%20CPGOAA`;
-
-                  fetch(apiUrl)
-                    .then((response) => {
-                      if (!response.ok) {
-                        throw new Error(
-                          `HTTP error! Status: ${response.status}`
-                        );
-                      }
-                      return response.json(); // Parse the JSON response
-                    })
-                    .then((data) => {
-                      console.log(data); // Handle the parsed JSON data here
-                      toast.success("Details sent to customer");
-                    })
-                    .catch((error) => {
-                      console.error("Fetch error:", error);
-                      toast.success("Details sent to customer");
-                    });
-                  toast.success("Payment link sent to customer successfully");
-                  navigate("/BookingList");
-                }
-              }));
-              
             } else {
               navigate("/SendAck", {
                 state: { userData: callback?.response?.Details },
@@ -536,6 +565,7 @@ const NewBooking = () => {
             toast.error(callback.error);
           } else {
             toast.error(callback.error);
+            setLoader(false);
           }
         })
       );
@@ -572,7 +602,7 @@ const NewBooking = () => {
 
   const [selectedOption, setSelectedOption] = useState("");
 
-  const [paymentOption, setPaymentOption] = useState("");
+  const [paymentOption, setPaymentOption] = useState("1");
 
   const handleSelectChange = (e) => {
     const selectedValue = e.target.value;
@@ -663,9 +693,85 @@ const NewBooking = () => {
   const formattedEndDate = moment(endDate).format("YYYY-MM-DD");
 
   const tomorrowDate = moment().format("YYYY-MM-DD");
+  const minBookingDate =
+    formattedStartDate && formattedStartDate !== "Invalid date"
+      ? moment.max(moment(formattedStartDate), moment(tomorrowDate)).format(
+          "YYYY-MM-DD"
+        )
+      : tomorrowDate;
+
+  const getBookingWindowMessage = () => {
+    if (!formattedStartDate || !formattedEndDate) return null;
+    if (
+      formattedStartDate === "Invalid date" ||
+      formattedEndDate === "Invalid date" ||
+      moment(formattedStartDate).isAfter(moment(formattedEndDate), "day")
+    ) {
+      return "Booking window is not configured correctly.";
+    }
+    return null;
+  };
+
+  const normalizeBlockedDate = (dateValue) => {
+    if (!dateValue) return "";
+    return moment.utc(dateValue).utcOffset(330).format("YYYY-MM-DD");
+  };
+
+  const getBlockedPeriodForDate = (dateValue) => {
+    const selectedDate = moment(dateValue, "YYYY-MM-DD", true).format(
+      "YYYY-MM-DD"
+    );
+
+    if (!selectedDate || selectedDate === "Invalid date") return null;
+
+    return (blockedDates || []).find((period) => {
+      const startDate = normalizeBlockedDate(period.StartDate);
+      const endDate = normalizeBlockedDate(period.EndDate);
+      return selectedDate >= startDate && selectedDate <= endDate;
+    });
+  };
+
+  const handleFutureDateChange = (dateValue) => {
+    const blockedPeriod = getBlockedPeriodForDate(dateValue);
+    if (blockedPeriod) {
+      toast.error(
+        blockedPeriod.DateType === "sold_out"
+          ? "This date is sold out. Please contact admin."
+          : "This date is blacked out. Please contact admin."
+      );
+      setFutureDate("");
+      return;
+    }
+
+    setFutureDate(dateValue);
+  };
+
+  useEffect(() => {
+    if (!futureDate || blockedDates.length === 0) return;
+
+    const blockedPeriod = getBlockedPeriodForDate(futureDate);
+    if (!blockedPeriod) return;
+
+    toast.error(
+      blockedPeriod.DateType === "sold_out"
+        ? "This date is sold out. Please contact admin."
+        : "This date is blacked out. Please contact admin."
+    );
+    setFutureDate("");
+  }, [blockedDates, futureDate]);
 
   const [isFlashing, setIsFlashing] = useState(false);
   const discountText = `${websiteDicount}% OFF for all the users `;
+
+  // useEffect(() => {
+  //   // Start the flashing animation when the component mounts
+  //   const intervalId = setInterval(() => {
+  //     setIsFlashing((prevIsFlashing) => !prevIsFlashing);
+  //   }, 1000);
+
+  //   // Clean up the interval when the component unmounts
+  //   return () => clearInterval(intervalId);
+  // }, []);
 
   const cardStyle = {
     backgroundColor: isFlashing ? "#4a85f6" : "#f06a6b",
@@ -676,14 +782,7 @@ const NewBooking = () => {
     fontSize: "18px",
   };
 
-  const agentDiscountedAmount = amount - (amount * agentDiscount) / 100;
-
   console.log("Amount-------------------------------------->", amount);
-
-  console.log(
-    "Amount-------------------------------------->",
-    agentDiscountedAmount
-  );
 
   console.log("numberofteens----------------->", numberofteens);
 
@@ -717,6 +816,34 @@ const NewBooking = () => {
                 </div>
               </section>
 
+              {/* <div className="mt-5 col-6">
+                <div style={cardStyle}>{discountText}</div>
+              </div> */}
+
+              {/* <div>
+                <ul
+                  class="nav nav-tabs row justify-content-center mt-4"
+                  role="tablist"
+                >
+                  <li className={`nav-item col-lg-6`}>
+                    <p
+                      class="nav-link active "
+                      data-toggle="tab"
+                      href="#tabs-1"
+                      role="tab"
+                      style={{
+                        textAlign: "center",
+                        backgroundColor: "#cbb883",
+                        borderRadius: "0px",
+                        marginBottom: "10px",
+                      }}
+                    >
+                      Casino Pride Goa
+                    </p>
+                  </li>
+                </ul>
+              </div> */}
+
               <div className="row">
                 <div className="col-lg-6 mx-auto">
                   <p
@@ -742,8 +869,8 @@ const NewBooking = () => {
                   <div className="col-md-6 col-lg-3">
                     <div className="image-container d-flex flex-column align-items-center">
                       <img
-                        src="https://www.casinoprideofficial.com/assets/images/red-carpet.png"
-                        alt="Carpet"
+                        src="/assets/images/red-carpet.png"
+                        alt="Image 1"
                         className="img-fluid"
                       />
                       <p className="text-center mt-2">
@@ -754,8 +881,8 @@ const NewBooking = () => {
                   <div className="col-md-6 col-lg-3">
                     <div className="image-container d-flex flex-column align-items-center">
                       <img
-                        src="https://www.casinoprideofficial.com/assets/images/buffet.png"
-                        alt="Buffet"
+                        src="/assets/images/buffet.png"
+                        alt="Image 2"
                         className="img-fluid"
                       />
                       <p className="text-center mt-2">
@@ -766,8 +893,8 @@ const NewBooking = () => {
                   <div className="col-md-6 col-lg-3">
                     <div className="image-container d-flex flex-column align-items-center">
                       <img
-                        src="https://www.casinoprideofficial.com/assets/images/bonus.png"
-                        alt="Bonus"
+                        src="/assets/images/bonus.png"
+                        alt="Image 3"
                         className="img-fluid"
                       />
                       <p className="text-center mt-2">Gaming Offers</p>
@@ -776,7 +903,7 @@ const NewBooking = () => {
                   <div className="col-md-6 col-lg-3">
                     <div className="image-container d-flex flex-column align-items-center">
                       <img
-                        src="https://www.casinoprideofficial.com/assets/images/headphones.png"
+                        src="/assets/images/headphones.png"
                         alt="Image 4"
                         className="img-fluid"
                       />
@@ -798,16 +925,20 @@ const NewBooking = () => {
                         type="date"
                         placeholder="Enter Start Date"
                         value={futureDate}
-                        min={tomorrowDate}
+                        min={minBookingDate}
                         max={formattedEndDate}
-                        onChange={(e) => setFutureDate(e.target.value)}
+                        onChange={(e) => handleFutureDateChange(e.target.value)}
                       />
                     </div>
                   </div>
                   <ToastContainer />
                 </div>
                 <PackagesPage
+                  key={futureDate || "no-date"}
                   setamount={setamount}
+                  isCallCenter={isCallCenter}
+                  setamountAfterDiscount={setamountAfterDiscount}
+                  setPackageDiscounts={setPackageDiscounts}
                   setPackageIds={setPackageIds}
                   setPackageGuestCount={setPackageGuestCount}
                   setNumberofteens={setNumberofteens}
@@ -828,9 +959,17 @@ const NewBooking = () => {
                   setTeensWeekdayPrice={setTeensWeekdayPrice}
                   setTeensWeekendPrice={setTeensWeekendPrice}
                   setTeensPackageName={setTeensPackageName}
-                  agentDiscount={agentDiscount}
-                  agentDiscountedAmount={agentDiscountedAmount}
-                  futureDate={futureDate}
+                  setHasKids={setHasKids}
+                  setNumOfKids={setNumOfKids}
+                  futureDate={
+                    hasRoutedDate ? futureDate : outletBusinessDate || futureDate
+                  }
+                  categoryId={
+                    customerCategoryId ||
+                    (validateDetails?.Details?.CategoryId
+                      ? Number(validateDetails.Details.CategoryId)
+                      : null)
+                  }
                 />
                 <div className="col-lg-6 mt-3 mt-3">
                   <label for="formGroupExampleInput " className="form_text">
@@ -839,7 +978,7 @@ const NewBooking = () => {
                   <input
                     class="form-control mt-2 "
                     type="text"
-                    value={guestName}
+                    value={guestName || ""}
                     placeholder="Full Name"
                     onChange={(e) => setGuestName(e.target.value)}
                   />
@@ -862,111 +1001,7 @@ const NewBooking = () => {
                     onChange={onPhoneNumberChange}
                     defaultCountry="IN"
                     style={{ display: "block" }}
-                  />
-                </div>
-                <div className="col-lg-6 mt-3">
-                  <label
-                    for="formGroupExampleInput "
-                    className="form_text"
-                    style={{ fontSize: "15px", fontWeight: "600" }}
-                  >
-                    Email <span style={{ color: "red" }}>*</span>
-                  </label>
-                  <input
-                    class="form-control mt-2"
-                    type="text"
-                    placeholder="Enter Email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                </div>
-                <div className="col-lg-6 mt-3">
-                  <label
-                    for="formGroupExampleInput "
-                    className="form_text mb-2"
-                  >
-                    Country
-                  </label>
-
-                  <Select
-                    options={Country.getAllCountries().map((country) => ({
-                      label: country.name,
-                      name: country.name,
-                      value: country.name,
-                      isoCode: country.isoCode,
-                    }))}
-                    getOptionLabel={(options) => options.label}
-                    getOptionValue={(options) => options.value}
-                    value={selectedCountry}
-                    defaultValue={selectedCountry}
-                    onChange={(item) => {
-                      setSelectedCountry(item);
-                    }}
-                  />
-                </div>
-                <div className="col-lg-6 mt-3">
-                  <label
-                    for="formGroupExampleInput "
-                    className="form_text mb-2"
-                  >
-                    State
-                  </label>
-                  <Select
-                    // className="form-control"
-                    options={State?.getStatesOfCountry(
-                      selectedCountry?.isoCode
-                    )}
-                    getOptionLabel={(options) => {
-                      return options["name"];
-                    }}
-                    getOptionValue={(options) => {
-                      return options["name"];
-                    }}
-                    value={selectedState}
-                    onChange={(item) => {
-                      setSelectedState(item);
-                    }}
-                  />
-                </div>
-                <div className="col-lg-6 mt-3 ">
-                  <label
-                    for="formGroupExampleInput "
-                    className="form_text mb-2"
-                  >
-                    City
-                  </label>
-
-                  <input
-                    class="form-control "
-                    type="text"
-                    placeholder="Enter your city"
-                    value={selectedCity}
-                    onChange={(e) => setSelectedCity(e.target.value)}
-                  />
-                </div>
-                <div className="col-lg-6 mt-3">
-                  <label for="formGroupExampleInput " className="form_text">
-                    Address <span style={{ color: "red" }}>*</span>
-                  </label>
-                  <input
-                    class="form-control mt-2"
-                    type="text"
-                    placeholder="Enter your address"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                  />
-                </div>
-                <div className="col-lg-6 mt-3">
-                  <label for="formGroupExampleInput " className="form_text">
-                    GST Details
-                  </label>
-                  <input
-                    class="form-control mt-2"
-                    type="text"
-                    placeholder="Enter GST number"
-                    value={gstNumber}
-                    onChange={handleGstChange}
-                    maxLength={15}
+                    limitMaxLength
                   />
                 </div>
                 {/* <div className="col-lg-6 mt-3">
@@ -981,30 +1016,23 @@ const NewBooking = () => {
           />
         </div> */}
 
-                <div className="col-lg-6 mt-3 ">
-                  <label for="formGroupExampleInput " className="form_text">
-                    Date of birth
-                  </label>
-                  <input
-                    class="form-control mt-2"
-                    type="date"
-                    value={dateofbirth}
-                    placeholder="Enter Start Date"
-                    onChange={(e) => setDateofbirth(e.target.value)}
-                  />
-                </div>
-
                 <div className="col-lg-6 mt-3">
-                  <label htmlFor="formGroupExampleInput" className="form_text">
+                  <label className="form_text">
                     Agent Discount <span style={{ color: "red" }}>*</span>
                   </label>
                   <input
                     className="form-control mt-2"
                     type="number"
-                    placeholder="Enter your discount"
-                    value={agentDiscount}
-                    onChange={handleDiscountChange}
-                    onWheel={(e) => e.target.blur()}
+                    min="0"
+                    max={maxAgentDiscount || 100}
+                    placeholder="Enter discount %"
+                    value={agentDiscountPercent}
+                    onChange={(e) => {
+                      let val = Number(e.target.value);
+                      if (maxAgentDiscount > 0 && val > maxAgentDiscount) val = maxAgentDiscount;
+                      if (val < 0) val = 0;
+                      setAgentDiscountPercent(val);
+                    }}
                   />
                 </div>
 
@@ -1045,11 +1073,8 @@ const NewBooking = () => {
                     value={paymentOption} // Set the selected option based on the state
                     onChange={handlePaymentSelection} // Handle changes to the dropdown
                   >
-                    <option value="">Select...</option>
 
                     <option value="1"> Pay At Counter</option>
-                    <option value="2"> Normal Payu Flow</option>
-                    <option value="3"> Send Payment Link to Customer</option>
                   </select>
                 </div>
               </div>
@@ -1060,7 +1085,7 @@ const NewBooking = () => {
                   className="btn btn-primary mt-5 btn-lg"
                   onClick={onsubmit}
                   // disabled={(!loader && (packageIds?.length == 0 || numberofteens == "")) ? true : false}
-                  disabled = { loader ? true : (packageIds?.length == 0 && numberofteens == "") ? true : false }
+                  disabled = { loader ? true : packageIds?.length == 0 ? true : false }
                 >
                   {!loader ? (
                     "Confirm Booking"

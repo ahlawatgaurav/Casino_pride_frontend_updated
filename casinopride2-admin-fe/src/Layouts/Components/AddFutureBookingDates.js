@@ -13,7 +13,7 @@ const AddFutureBookingDates = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const { userData } = location.state;
+  const { userData } = location.state || {};
 
   console.log("Userdata from add future bookings--------->", userData);
 
@@ -26,18 +26,25 @@ const AddFutureBookingDates = () => {
   const [endDate, setEndDate] = useState(
     userData?.EndDate ? userData?.EndDate : ""
   );
+  const [dateType, setDateType] = useState(
+    userData?.DateType ? userData.DateType : "booking_window"
+  );
+  const [reason, setReason] = useState(userData?.Reason ? userData.Reason : "");
 
   const todayDate = moment().format("YYYY-MM-DD");
 
   const onsubmit = () => {
     if (startDate == "" || endDate == "") {
       toast.warning("Please Select both the dates");
+    } else if (moment(startDate).isAfter(moment(endDate), "day")) {
+      toast.warning("Start date cannot be after end date");
     } else {
       const data = {
         futureDateId: 0,
-        // startDate: startDate,
+        blockedDateId: userData?.Id || 0,
+        dateType,
+        reason,
         startDate: moment(startDate).format("YYYY-MM-DD"),
-        // endDate: endDate,
         endDate: moment(endDate).format("YYYY-MM-DD"),
       };
 
@@ -47,9 +54,8 @@ const AddFutureBookingDates = () => {
           loginDetails?.logindata?.Token,
           (callback) => {
             if (callback.status) {
-              toast.success("Future booking dates added");
+              toast.success("Date period added");
               navigate(-1);
-              toast.error(callback.error);
             } else {
               toast.error(callback.error);
             }
@@ -65,12 +71,15 @@ const AddFutureBookingDates = () => {
   const DateEditFn = () => {
     if (startDate == "" || endDate == "") {
       toast.warning("Please Select both the dates");
+    } else if (moment(startDate).isAfter(moment(endDate), "day")) {
+      toast.warning("Start date cannot be after end date");
     } else {
       const data = {
-        futureDateId: 1,
-        // startDate: startDate,
+        futureDateId: dateType === "booking_window" ? 1 : 0,
+        blockedDateId: userData?.Id || 0,
+        dateType,
+        reason,
         startDate: moment(startDate).format("YYYY-MM-DD"),
-        // endDate: endDate,
         endDate: moment(endDate).format("YYYY-MM-DD"),
       };
 
@@ -82,9 +91,8 @@ const AddFutureBookingDates = () => {
           loginDetails?.logindata?.Token,
           (callback) => {
             if (callback.status) {
-              toast.success("Future booking dates Edited");
+              toast.success("Date period edited");
               navigate(-1);
-              toast.error(callback.error);
             } else {
               toast.error(callback.error);
             }
@@ -96,7 +104,21 @@ const AddFutureBookingDates = () => {
 
   return (
     <div className="row">
-      <h3 className="mb-4">Add Future Booking Dates</h3>
+      <h3 className="mb-4">Add Date Period</h3>
+      <div className="col-lg-6 mt-3">
+        <label for="formGroupExampleInput " className="form_text">
+          Period Type <span style={{ color: "red" }}>*</span>
+        </label>
+        <select
+          className="form-control mt-2"
+          value={dateType}
+          onChange={(e) => setDateType(e.target.value)}
+        >
+          <option value="booking_window">Booking Window</option>
+          <option value="sold_out">Sold Out</option>
+          <option value="black_out">Black Out</option>
+        </select>
+      </div>
       <div className="col-lg-6 mt-3">
         <label for="formGroupExampleInput " className="form_text">
           Start Date <span style={{ color: "red" }}>*</span>
@@ -122,17 +144,31 @@ const AddFutureBookingDates = () => {
           defaultValue={formattedEndDate}
         />
       </div>
+      {dateType !== "booking_window" && (
+        <div className="col-lg-6 mt-3">
+          <label for="formGroupExampleInput " className="form_text">
+            Reason
+          </label>
+          <input
+            className="form-control mt-2"
+            type="text"
+            placeholder="Optional reason"
+            onChange={(e) => setReason(e.target.value)}
+            value={reason}
+          />
+        </div>
+      )}
 
       {!userData ? (
         <div className="mt-5">
           <button onClick={onsubmit} className="btn btn-primary">
-            Add Date
+            Add Period
           </button>
         </div>
       ) : (
         <div className="mt-5">
           <button onClick={DateEditFn} className="btn btn-primary">
-            Edit Date
+            Edit Period
           </button>
         </div>
       )}

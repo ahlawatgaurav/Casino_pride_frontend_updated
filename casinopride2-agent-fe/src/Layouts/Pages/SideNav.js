@@ -134,11 +134,14 @@ const SideNav = () => {
                 Agent Settlements
               </Link>
             </Nav.Item>
+            {/* Discounts tab hidden 2026-07-04 - re-enable later:
             <Nav.Item eventKey="3" icon={<PageIcon />}>
               <Link to="/AgentsDiscounts" className="links">
                 Discounts
               </Link>
             </Nav.Item>
+            */}
+
 
             <Nav.Item eventKey="6" icon={<ExitIcon />} onClick={openModal}>
               Logout

@@ -5,7 +5,8 @@ import storage from "redux-persist/lib/storage";
 import rootReducer from "./reducers";
 
 const persistConfig = {
-  key: "root",
+  // Bumped key to purge stale persisted state accumulated across redeploys.
+  key: "root_v2",
   storage,
 };
 

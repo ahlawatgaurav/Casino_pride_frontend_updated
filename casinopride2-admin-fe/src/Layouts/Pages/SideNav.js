@@ -19,6 +19,7 @@ import { useDispatch } from "react-redux";
 import { Logout } from "../../Redux/actions/auth";
 import { ToastContainer, toast } from "react-toastify";
 import ThreeColumnsIcon from "@rsuite/icons/ThreeColumns";
+import BarChartIcon from "@rsuite/icons/BarChart";
 import "react-toastify/dist/ReactToastify.css";
 import "../../assets/NavBar.css";
 import { Link } from "react-router-dom";
@@ -49,6 +50,18 @@ const SideNav = () => {
   const validateDetails = useSelector(
     (state) => state.auth?.userDetailsAfterValidation
   );
+
+  const isCallCenterUser = (user) => {
+    const categoryName = String(
+      user?.CategoryName || user?.Category || user?.CategoryTitle || ""
+    ).toLowerCase();
+
+    return categoryName.includes("call center") || categoryName.includes("call centre");
+  };
+
+  const isCallCenterLogin =
+    isCallCenterUser(loginDetails?.logindata) ||
+    isCallCenterUser(validateDetails?.Details);
   const logoutFn = () => {
     const data = {
       UserId: loginDetails?.logindata?.userId,
@@ -114,16 +127,16 @@ const SideNav = () => {
       )}
       <hr />
       <Sidenav expanded={expanded} defaultOpenKeys={["3", "4"]}>
-      <span style={{fontSize: "15px", fontWeight: "700", color: "black", padding: "10px 20px", border: "1px solid black", borderLeft: 0, display: "flex", "alignItems": "baseline"}}>
-        <AdminIcon style={{marginRight: "20px"}}/>
-        {validateDetails?.Details?.Name}
+        <span style={{ fontSize: "15px", fontWeight: "700", color: "black", padding: "10px 20px", border: "1px solid black", borderLeft: 0, display: "flex", "alignItems": "baseline" }}>
+          <AdminIcon style={{ marginRight: "20px" }} />
+          {validateDetails?.Details?.Name}
         </span>
         <Sidenav.Body>
           <Nav activeKey={activeKey} onSelect={setActiveKey}>
             {loginDetails?.logindata?.UserType == "1" ||
-            loginDetails?.logindata?.UserType == "3" ||
-            loginDetails?.logindata?.UserType == "2" || 
-            loginDetails?.logindata?.UserType == "7" ? (
+              loginDetails?.logindata?.UserType == "3" ||
+              loginDetails?.logindata?.UserType == "2" ||
+              loginDetails?.logindata?.UserType == "7" ? (
               <Nav.Item
                 eventKey="10"
                 icon={<TagNumberIcon />}
@@ -137,15 +150,17 @@ const SideNav = () => {
               <></>
             )}
             {loginDetails?.logindata?.UserType == "1" ||
-            loginDetails?.logindata?.UserType == "3" ||
-            loginDetails?.logindata?.UserType == "2" ? (
+              loginDetails?.logindata?.UserType == "3" ||
+              loginDetails?.logindata?.UserType == "2" ||
+              loginDetails?.logindata?.UserType == "9" ||
+              isCallCenterLogin ? (
               <Nav.Item
                 eventKey="1"
                 icon={<DocPassIcon />}
                 onClick={bookingsLink}
               >
                 <Link to="/BookingList" className="links">
-                  Bookings
+                  Leads
                 </Link>
               </Nav.Item>
             ) : (
@@ -153,9 +168,9 @@ const SideNav = () => {
             )}
 
             {loginDetails?.logindata?.UserType == "1" ||
-            loginDetails?.logindata?.UserType == "7" ||
-            loginDetails?.logindata?.UserType == "3" ||
-            loginDetails?.logindata?.UserType == "2" ? (
+              loginDetails?.logindata?.UserType == "7" ||
+              loginDetails?.logindata?.UserType == "3" ||
+              loginDetails?.logindata?.UserType == "2" ? (
               <Nav.Item eventKey="6" icon={<PageIcon />} onClick={billingLink}>
                 <Link to="/BillingList" className="links">
                   Billing
@@ -176,70 +191,38 @@ const SideNav = () => {
             ) : (
               <></>
             )} */}
-            {loginDetails?.logindata?.UserType == "1" ? (
-              <Nav.Menu
-                placement="rightStart"
+            {loginDetails?.logindata?.UserType == "1" ||
+              loginDetails?.logindata?.UserType == "9" ? (
+              <Nav.Item
                 eventKey="3"
-                title="Users"
                 icon={<PeoplesIcon />}
+                onClick={() => navigate("/ProfileList")}
               >
-                <Nav.Item
-                  eventKey="3-1"
-                  onClick={() => navigate("/ManagerList")}
-                >
-                  <Link to="/ManagerList" className="links">
-                    Manager
-                  </Link>
-                </Nav.Item>
-                <Nav.Item eventKey="3-2" onClick={() => navigate("/GREList")}>
-                  <Link to="/GREList" className="links">
-                    GRE
-                  </Link>
-                </Nav.Item>
-                <Nav.Item
-                  eventKey="3-3"
-                  onClick={() => navigate("/MasterAgent")}
-                >
-                  {" "}
-                  <Link to="/MasterAgent" className="links">
-                    Master Agent
-                  </Link>
-                </Nav.Item>
-                <Nav.Item eventKey="3-4" onClick={() => navigate("/AgentList")}>
-                  <Link to="/AgentList" className="links">
-                    Travel Agent
-                  </Link>
-                </Nav.Item>
-                <Nav.Item
-                  eventKey="3-4"
-                  onClick={() => navigate("/DriverList")}
-                >
-                  <Link to="/DriverList" className="links">
-                    Taxi Agent
-                  </Link>
-                </Nav.Item>
-                <Nav.Item
-                  eventKey="3-4"
-                  onClick={() => navigate("/LocalAgentList")}
-                >
-                  <Link to="/LocalAgentList" className="links">
-                    Local Agent
-                  </Link>
-                </Nav.Item>
-                <Nav.Item
-                  eventKey="3-4"
-                  onClick={() => navigate("/AccountsList")}
-                >
-                  <Link to="/AccountsList" className="links">
-                    Accounts
-                  </Link>
-                </Nav.Item>
-              </Nav.Menu>
+                <Link to="/ProfileList" className="links">
+                  Users
+                </Link>
+              </Nav.Item>
             ) : (
               <></>
             )}
+
             {loginDetails?.logindata?.UserType == "1" ||
-            loginDetails?.logindata?.UserType == "4" ? (
+              loginDetails?.logindata?.UserType == "9" ? (
+              <Nav.Item
+                eventKey="12"
+                icon={<GearCircleIcon />}
+                onClick={() => navigate("/CategoryList")}
+              >
+                <Link to="/CategoryList" className="links">
+                  Categories
+                </Link>
+              </Nav.Item>
+            ) : (
+              <></>
+            )}
+
+            {loginDetails?.logindata?.UserType == "1" ||
+              loginDetails?.logindata?.UserType == "4" ? (
               <Nav.Item
                 eventKey="6"
                 icon={<CouponIcon />}
@@ -254,7 +237,8 @@ const SideNav = () => {
             )}
 
             {loginDetails?.logindata?.UserType == "1" ||
-            loginDetails?.logindata?.UserType == "4" ? (
+              loginDetails?.logindata?.UserType == "4" ||
+              loginDetails?.logindata?.UserType == "9" ? (
               <Nav.Item
                 eventKey="7"
                 icon={<ThreeColumnsIcon />}
@@ -283,7 +267,23 @@ const SideNav = () => {
             )}
 
             {loginDetails?.logindata?.UserType == "1" ||
-            loginDetails?.logindata?.UserType == "4" ? (
+              loginDetails?.logindata?.UserType == "2" ||
+              loginDetails?.logindata?.UserType == "9" ? (
+              <Nav.Item
+                eventKey="80"
+                icon={<BarChartIcon />}
+                onClick={() => navigate("/Reports")}
+              >
+                <Link to="/Reports" className="links">
+                  Reports
+                </Link>
+              </Nav.Item>
+            ) : (
+              <></>
+            )}
+
+            {loginDetails?.logindata?.UserType == "1" ||
+              loginDetails?.logindata?.UserType == "4" ? (
               <Nav.Item
                 eventKey="7"
                 icon={<CalendarIcon />}
@@ -304,15 +304,15 @@ const SideNav = () => {
                 title="Discounts"
                 icon={<MagicIcon />}
               >
-                  <Nav.Item
-                    eventKey="3-1"
-                    onClick={() => navigate("/Discountonwebsite")}
-                  >
-                    <Link to="/Discountonwebsite" className="links">
-                      Website Discounts
-                    </Link>
-                  </Nav.Item>
-                
+                <Nav.Item
+                  eventKey="3-1"
+                  onClick={() => navigate("/Discountonwebsite")}
+                >
+                  <Link to="/Discountonwebsite" className="links">
+                    Website Discounts
+                  </Link>
+                </Nav.Item>
+
                 <Nav.Item
                   eventKey="3-2"
                   onClick={() => navigate("/DiscountOnPanel")}

@@ -12,6 +12,9 @@ import { toast } from "react-toastify";
 
 const PackagesPage = ({
   setamount,
+  setamountAfterDiscount,
+  isCallCenter = false,
+  setPackageDiscounts,
   setPackageIds,
   setPackageGuestCount,
   setNumberofteens,
@@ -30,9 +33,10 @@ const PackagesPage = ({
   setTeensWeekendPrice,
   setTeensWeekdayPrice,
   setTeensPackageName,
-  agentDiscount,
-  agentDiscountedAmount,
+  setHasKids,
+  setNumOfKids,
   futureDate,
+  categoryId = null,
 }) => {
   const dispatch = useDispatch();
   const [loading, setLoading] = useState(true);
@@ -49,9 +53,9 @@ const PackagesPage = ({
     (state) => state.auth?.userDetailsAfterLogin.Details
   );
 
-  const fetchPackageDetails = () => {
+  const fetchPackageDetails = (catId = null) => {
     dispatch(
-      getPackagesDetails(loginDetails?.logindata?.Token, 4, (callback) => {
+      getPackagesDetails(loginDetails?.logindata?.Token, 4, catId, (callback) => {
         if (callback.status) {
           setLoading(false);
 
@@ -64,8 +68,8 @@ const PackagesPage = ({
   };
 
   useEffect(() => {
-    fetchPackageDetails();
-  }, [dispatch]);
+    fetchPackageDetails(categoryId);
+  }, [dispatch, categoryId]);
 
   console.log(
     "Package Detailsnew ------------------------------------>",
@@ -87,6 +91,14 @@ const PackagesPage = ({
     groupedData[0]?.Id
   );
   const [selectedPackages, setSelectedPackages] = useState({});
+  // Per-package discount % (call-centre only), keyed by packageId.
+  const [pkgDiscounts, setPkgDiscounts] = useState({});
+  const handlePackageDiscountChange = (packageId, value) => {
+    let v = parseFloat(value);
+    if (isNaN(v) || v < 0) v = 0;
+    if (v > 100) v = 100;
+    setPkgDiscounts((prev) => ({ ...prev, [packageId]: v }));
+  };
 
   const handleCounterChange = (
     packageId,
@@ -207,28 +219,18 @@ const PackagesPage = ({
     console.log("Selected Packages:", selectedPackages);
   };
 
-  const [teensCount, setTeensCount] = useState(0);
-  const [teensPrice, setTeensPrice] = useState(0);
+  const [kidsIncluded, setKidsIncluded] = useState(false);
+  const [kidsCount, setKidsCount] = useState(0);
 
-  const handleIncrement = () => {
-    if (futureDate != "") {
-      if (formattedData?.packageId?.length == 0) {
-        toast.error("Please Select adults");
-      }
-      else{
-        setTeensCount((prevCount) => prevCount + 1);
-      }
-    } else {
-
-      toast.error("Please Select the date");
-    }
+  const handleKidsIncludedChange = (event) => {
+    const checked = event.target.checked;
+    setKidsIncluded(checked);
+    setKidsCount(checked ? 1 : 0);
   };
 
-  const handleDecrement = () => {
-    if (teensCount > 0) {
-      setTeensCount((prevCount) => prevCount - 1);
-      setNumberofteens((prevCount) => prevCount - 1);
-    }
+  const handleKidsCountChange = (event) => {
+    const value = event.target.value.replace(/\D/g, "");
+    setKidsCount(value);
   };
 
   const TotalAmount = packagePrices.reduce(
@@ -241,9 +243,9 @@ const PackagesPage = ({
     0
   );
 
-  const totalTeensPrice = teensCount * groupedData[0]?.PackageTeensPrice;
+  const totalTeensPrice = 0;
 
-  const totalTeensRate = teensCount * groupedData[0]?.PackageTeensRate;
+  const totalTeensRate = 0;
 
   console.log(
     "teensCount * groupedData[0]?.PackageTeensRate----------->",
@@ -254,17 +256,31 @@ const PackagesPage = ({
 
   const teensTaxName = groupedData[0]?.PackageTeensTaxName;
 
-  const totalAmountOfAllPackages = totalTeensPrice + TotalAmount;
+  const totalAmountOfAllPackages = TotalAmount;
 
-  const totalCountofCustomer = teensCount + TotalAdultGustCount;
+  // Per-package discount (call-centre): net = sum of each package price minus its own discount %.
+  const packageDiscountArray = [];
+  let callCenterPackagesNet = 0;
+  packageIds.forEach((pid, i) => {
+    const disc = Number(pkgDiscounts[pid] || 0);
+    packageDiscountArray.push(disc);
+    callCenterPackagesNet += (packagePrices[i] || 0) * (1 - disc / 100);
+  });
+
+  const normalizedKidsCount = Number(kidsCount || 0);
+  const totalCountofCustomer = normalizedKidsCount + TotalAdultGustCount;
 
   useEffect(() => {
     console.log("totalTeensRate------------------>", totalTeensRate);
     setamount(totalAmountOfAllPackages);
+    if (isCallCenter) {
+      if (setamountAfterDiscount) setamountAfterDiscount(callCenterPackagesNet);
+      if (setPackageDiscounts) setPackageDiscounts(packageDiscountArray);
+    }
     setPackageIds(formattedData.packageId);
     setPackageGuestCount(formattedData.packageGuestCount);
     settoalGuestCount(totalCountofCustomer);
-    setNumberofteens(teensCount);
+    setNumberofteens(0);
     setTotalTeensPrice(totalTeensPrice);
     setTeenPackageId(groupedData[0]?.Id);
     setTotalTeensTax();
@@ -277,7 +293,9 @@ const PackagesPage = ({
     setTeensWeekendPrice(groupedData[0]?.PackageWeekendPrice);
     setTeensWeekdayPrice(groupedData[0]?.PackageWeekdayPrice);
     setTeensPackageName([groupedData[0]?.PackageName]);
-  }, [TotalAmount, teensCount]);
+    setHasKids(kidsIncluded ? 1 : 0);
+    setNumOfKids(kidsIncluded ? normalizedKidsCount : 0);
+  }, [TotalAmount, kidsIncluded, kidsCount, JSON.stringify(pkgDiscounts), isCallCenter]);
 
   console.log("total amount-------->", TotalAmount);
   console.log(
@@ -335,118 +353,45 @@ const PackagesPage = ({
                         setSelectedPackages={setSelectedPackages}
                         selectedPackages={selectedPackages}
                         handleBookNow={handleBookNow}
+                        isCallCenter={isCallCenter}
+                        packageDiscounts={pkgDiscounts}
+                        onDiscountChange={handlePackageDiscountChange}
                       />
                     ))}
                   </div>
 
                   <div className="p-4 col-lg-4 col-sm-10 col-md-8 mt-4 family-box">
-                    <div className="row align-items-center justify-content-center ">
-                      <div className="col-md-12 col-lg-3">
-                        <div className="image-container d-flex flex-column align-items-center">
-                          <img
-                            src="https://www.casinoprideofficial.com/assets/images/red-carpet.png"
-                            alt="Image 1"
-                            className="img-fluid package_card_image"
-                          />
-                          <p
-                            className="text-center"
-                            style={{
-                              fontSize: "8px",
-                            }}
-                          >
-                            Events & Live Entertainment
-                          </p>
-                        </div>
-                      </div>
-                      <div className="col-md-6 col-lg-4">
-                        <div className="image-container d-flex flex-column align-items-center">
-                          <img
-                            src="https://www.casinoprideofficial.com/assets/images/buffet.png"
-                            alt="Image 2"
-                            className="img-fluid package_card_image"
-                          />
-                          <p
-                            className="text-center  "
-                            style={{
-                              fontSize: "8px",
-                              lineHeight: "initial",
-                            }}
-                          >
-                            Unlimited Food & Drinks
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="d-flex justify-content-center mt-4">
-                      <div className="pricing-item">
-                        <h5 className="text-uppercase mb-1 text-center ">
-                          {groupedData[0]?.PackageTeensPrice}
-                        </h5>
-                        <h6 className="primary-color text-uppercase font-weight-bold text-center ">
-                          All Days
-                        </h6>
-                      </div>
-                    </div>
                     <div className="card-body">
-                      <div className="row">
-                        <div className="text-center col-lg-3 col-md-3 col-sm-3 col-3">
-                          <button
-                            onClick={handleDecrement}
-                            style={{
-                              borderRadius: "50%",
-                              width: "40px",
-                              height: "40px",
-                              color: "",
-                              backgroundColor: "#cbb883",
-                              border: "none",
-                              padding: "0",
-                              fontSize: "16px",
-                              lineHeight: "40px",
-                              textAlign: "center",
-                              cursor: "pointer",
-                            }}
-                          >
-                            -
-                          </button>
-                        </div>
-
-                        <div className="text-center col-lg-6 col-md-6 col-sm-6 col-6">
-                          <p
-                            className="text-uppercase"
-                            style={{
-                              fontSize: "12px",
-                              textAlign: "center",
-                              verticalAlign: "center",
-                              marginTop: "10px",
-                              fontWeight: "bold",
-                            }}
-                          >
-                            {/* Teens: {teensCount} */}
-                            Kids: {teensCount}
-                          </p>
-                        </div>
-                        <div className="text-center col-lg-3 col-md-3 col-sm-3 col-3">
-                          <button
-                            onClick={handleIncrement}
-                            style={{
-                              borderRadius: "50%",
-                              width: "40px",
-                              height: "40px",
-                              color: "",
-                              backgroundColor: "#cbb883",
-                              border: "none",
-                              padding: "0",
-                              fontSize: "16px",
-                              lineHeight: "40px",
-                              textAlign: "center",
-                              cursor: "pointer",
-                            }}
-                          >
-                            +
-                          </button>
-                        </div>
+                      <div className="form-check d-flex justify-content-center align-items-center gap-2">
+                        <input
+                          className="form-check-input"
+                          type="checkbox"
+                          id="kidsIncluded"
+                          checked={kidsIncluded}
+                          onChange={handleKidsIncludedChange}
+                        />
+                        <label className="form-check-label fw-bold" htmlFor="kidsIncluded">
+                          Kids Included
+                        </label>
                       </div>
+                      {kidsIncluded ? (
+                        <div className="mt-3">
+                          <label className="form_text" htmlFor="kidsCount">
+                            Number of Kids
+                          </label>
+                          <input
+                            id="kidsCount"
+                            className="form-control mt-2"
+                            type="text"
+                            inputMode="numeric"
+                            value={kidsCount}
+                            onChange={handleKidsCountChange}
+                            placeholder="Enter number of kids"
+                          />
+                        </div>
+                      ) : (
+                        <></>
+                      )}
                     </div>
                   </div>
 
@@ -503,8 +448,7 @@ const PackagesPage = ({
                     <></>
                   )} */}
 
-                  {Object.keys(selectedPackages).length > 0 ||
-                  teensCount > 0 ? (
+                  {Object.keys(selectedPackages).length > 0 ? (
                     <div className="selected-packages row">
                       <div className="card col-12 mt-4">
                         <div className="card-body">
@@ -548,42 +492,6 @@ const PackagesPage = ({
                               </div>
                             )
                           )}
-                          {teensCount > 0 ? (
-                            <div className="row package-item">
-                              <div className="col-4 ">
-                                <p className="mb-0 detail">
-                                  {/* <span className="detail">Teens:</span>{" "} */}
-                                  <span className="detail">Kids :</span>{" "}
-                                  {teensCount}
-                                </p>
-                              </div>
-                              <div className="col-4 ">
-                                <p
-                                  className="mb-0 detail"
-                                  style={{ textAlign: "center" }}
-                                >
-                                  {/* <span className="detail">Teens count:</span>{" "} */}
-                                  <span className="detail">Kids Count :</span>{" "}
-                                  {teensCount}
-                                </p>
-                              </div>
-                              <div className="col-4 ">
-                                <p
-                                  className="mb-0 detail"
-                                  style={{ textAlign: "right" }}
-                                >
-                                  <span className="detail">
-                                    {/* Total Teens Price: */}
-                                    Total Kids Price :
-                                  </span>{" "}
-                                  {totalTeensPrice}
-                                </p>
-                              </div>
-                            </div>
-                          ) : (
-                            <></>
-                          )}
-
                           <div className="row package-item">
                             <div className="col-4 "></div>
                             <div className="col-4 "></div>
@@ -597,26 +505,6 @@ const PackagesPage = ({
                               </p>
                             </div>
                           </div>
-
-                          {agentDiscountedAmount == "" ? (
-                            <></>
-                          ) : (
-                            <div className="row package-item">
-                              <div className="col-4 "></div>
-                              <div className="col-4 "></div>
-                              <div className="col-4 ">
-                                <p
-                                  className="mb-0 detail"
-                                  style={{ textAlign: "right" }}
-                                >
-                                  <span className="detail">
-                                    Amount After Discount :
-                                  </span>{" "}
-                                  {agentDiscountedAmount}
-                                </p>
-                              </div>
-                            </div>
-                          )}
 
                           {couponDiscount == "" ? (
                             <></>

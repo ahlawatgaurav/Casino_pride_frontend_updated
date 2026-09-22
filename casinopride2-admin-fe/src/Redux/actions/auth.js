@@ -9,6 +9,15 @@ import "react-toastify/dist/ReactToastify.css";
 console.log("Log from apin ", api);
 
 const today = moment().format("YYYY-MM-DD");
+const AUTH_TOKEN_KEY = "AuthToken";
+
+const isCallCenterUser = (user) => {
+  const categoryName = String(
+    user?.CategoryName || user?.Category || user?.CategoryTitle || ""
+  ).toLowerCase();
+
+  return categoryName.includes("call center") || categoryName.includes("call centre");
+};
 
 console.log("loginDetails");
 
@@ -21,7 +30,10 @@ export const Login = (data, callback) => async (dispatch) => {
       if (response.data?.Details) {
         dispatch(saveValidateData(response.data));
 
-        if(response.data?.Details?.UserType == 5 || response.data?.Details?.UserType == 8) {
+        if(
+          (response.data?.Details?.UserType == 5 || response.data?.Details?.UserType == 8) &&
+          !isCallCenterUser(response.data?.Details)
+        ) {
           callback({ status: false, error: "Not allowed to login"});
         }
         else if (
@@ -43,10 +55,15 @@ export const Login = (data, callback) => async (dispatch) => {
                 })
                   .then((response) => {
                     console.log("Login data -->", response.data);
+                    const authToken = response?.data?.Details?.logindata?.Token;
+                    if (authToken) {
+                      localStorage.setItem(AUTH_TOKEN_KEY, authToken);
+                    }
                     dispatch(saveLoginData(response.data));
                     callback({
                       status: true,
                       response: response?.data,
+                      validateDetails: validateDetailsData,
                     });
                     if (response?.data) {
                       console.log("Reached Hereeeee");
@@ -87,10 +104,15 @@ export const Login = (data, callback) => async (dispatch) => {
           })
             .then((response) => {
               console.log("Login data -->", response.data);
+              const authToken = response?.data?.Details?.logindata?.Token;
+              if (authToken) {
+                localStorage.setItem(AUTH_TOKEN_KEY, authToken);
+              }
               dispatch(saveLoginData(response.data));
               callback({
                 status: true,
                 response: response?.data,
+                validateDetails: validateDetailsData,
               });
               if (response?.data) {
                 console.log("Reached Hereeeee");
@@ -136,6 +158,7 @@ export const Logout = (data, token, callback) => async (dispatch) => {
       console.log("LOGOUT RESPONSE :: ==>", response.data);
       if (response.data?.Details) {
         console.log("LOGOUT :: ==>", response.data?.Details);
+        localStorage.removeItem(AUTH_TOKEN_KEY);
 
         callback({ status: true, res: response.data?.Details });
       } else if (response.data?.Error?.ErrorMessage) {

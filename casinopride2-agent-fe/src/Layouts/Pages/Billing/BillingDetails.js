@@ -18,6 +18,7 @@ import { PDFDocument, rgb } from "pdf-lib";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { shortenUrl } from "../../../Redux/actions/users";
+import api from "../../../Service/api";
 
 const BillingDetails = () => {
   const location = useLocation();
@@ -231,6 +232,22 @@ const BillingDetails = () => {
                         );
                         setUpatedQrcodeImage(callback?.response?.shortUrl);
                         setLoader(false);
+
+                        // SMS via backend — browser se direct call CORS se block hoti thi
+                        const phone = BookingDetails[0]?.Phone;
+                        const shortUrl = callback?.response?.shortUrl;
+                        const amount = BookingDetails[0]?.ActualAmount;
+                        if (phone && shortUrl) {
+                          api.BILLING_PORT.post(
+                            "/billing/sendSMS",
+                            { phone, amount, shortUrl },
+                            { headers: { AuthToken: loginDetails?.logindata?.Token } }
+                          )
+                            .then(() => { console.log("[SMS] sent phone=", phone); })
+                            .catch((err) => { console.error("[SMS] error", err); });
+                        } else {
+                          console.log("[SMS] skipped phone=", phone, "shortUrl=", shortUrl);
+                        }
                       } else {
                         toast.error(callback.error);
                       }
@@ -313,11 +330,7 @@ const BillingDetails = () => {
                         );
                         setUpatedQrcodeImage(callback?.response?.shortUrl);
 
-                        let shortUrl = callback?.response?.shortUrl;
-                        
-
-                        const apiUrl = `https://commnestsms.com/api/push.json?apikey=635cd8e64fddd&route=transactional&sender=CPGOAA&mobileno=${BookingDetails[0]?.Phone}&text=Thank%20you%20for%20choosing%20Casino%20Pride.%20View%20e-bill%20of%20Rs%20${BookingDetails[0]?.ActualAmount}%20at%20-%20${shortUrl}%0ALets%20Play%20with%20Pride%20!%0AGood%20luck%20!%0ACPGOAA`;
-
+                        const apiUrl = `http://commnestsms.com/api/push.json?apikey=635cd8e64fddd&route=transactional&sender=CPGOAA&mobileno=${BookingDetails[0]?.Phone}&text=Thank%20you%20for%20choosing%20Casino%20Pride.%20View%20e-bill%20of%20Rs%20${BookingDetails[0]?.ActualAmount}%20at%20-%20${callback?.response?.shortUrl}%0ALets%20Play%20with%20Pride%20!%0AGood%20luck%20!%0ACPGOAA`;
                         fetch(apiUrl)
                           .then((response) => {
                             if (!response.ok) {
@@ -566,7 +579,7 @@ const BillingDetails = () => {
                       style={{ fontWeight: "bold" }}
                       className="BillPrintFont"
                     >
-                      {item.TotalGuestCount}
+                      {item.TotalGuestCount - (BookingDetails[0].NumOfTeens || 0)}
                     </span>
                   </p>
                 </div>
